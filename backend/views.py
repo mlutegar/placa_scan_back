@@ -1,3 +1,5 @@
+import uuid
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -153,3 +155,49 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
             'detection': PlateDetectionSerializer(detection).data,
             'plates': plates_data
         })
+
+    @action(detail=False, methods=['post'])
+    def process_frame(self, request):
+        """
+        Processa um frame único do stream de vídeo
+        """
+        try:
+            if 'frame' not in request.FILES:
+                return Response({'error': 'Frame obrigatório'}, status=400)
+
+            frame_file = request.FILES['frame']
+
+            # Salvar temporariamente
+            temp_path = f'/tmp/frame_{uuid.uuid4()}.jpg'
+            with open(temp_path, 'wb+') as destination:
+                for chunk in frame_file.chunks():
+                    destination.write(chunk)
+
+            # Detectar placas
+            detector_service = PlateDetectorService()
+            detected_plates = detector_service.detect_plates(temp_path)
+
+            # OCR rápido
+            plates_data = []
+            for plate_data in detected_plates:
+                ocr_results = detector_service.process_plate_ocr_fast(
+                    plate_data['cropped_image']
+                )
+
+                plates_data.append({
+                    'bounding_box': plate_data['bounding_box'],
+                    'confidence': plate_data['confidence'],
+                    'text': ocr_results['best_text'],
+                    'text_confidence': ocr_results['best_confidence']
+                })
+
+            # Limpar arquivo temporário
+            os.remove(temp_path)
+
+            return Response({
+                'plates': plates_data,
+                'frame_processed': True
+            })
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

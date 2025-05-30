@@ -3,3 +3,8 @@ numpy
 ultralytics
 easyocr
 djangorestframework
+channels
+websockets
+opencv-python-headless
+channels_redis
+daphne

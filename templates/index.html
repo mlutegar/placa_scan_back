@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Front-end Simples</title>
+    {% load static %} {# Carrega os arquivos estáticos #}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <h1>Bem-vindo ao meu front-end Django!</h1>
+    <p>Este é um exemplo bem simples.</p>
+    <img src="{% static 'img/django-logo.png' %}" alt="Logo Django" width="100">
+    <script src="{% static 'js/script.js' %}"></script>
+</body>
+</html>
