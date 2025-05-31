@@ -1,20 +1,17 @@
-import tempfile
-
 import cv2
 import numpy as np
-import os
-import json
+import pytesseract
+from PIL import Image
 import logging
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 from ultralytics import YOLO
 import easyocr
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.utils import timezone
-from io import BytesIO
-import uuid
+
 
 logger = logging.getLogger(__name__)
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 
 class PlateDetectorService:
@@ -302,31 +299,60 @@ class PlateDetectorService:
     def detect_plates_from_array(self, image_array):
         """
         Detecta placas diretamente de um array numpy sem salvar arquivo temporário
-
         Args:
             image_array: Array numpy da imagem (formato BGR do OpenCV)
-
         Returns:
             Lista de dicionários com informações das placas detectadas
         """
         try:
-            # Criar arquivo temporário na memória
-            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
-                temp_path = temp_file.name
+            # Executar detecção YOLO diretamente no array
+            results = self.model(image_array)
 
-                # Salvar a imagem temporariamente
-                cv2.imwrite(temp_path, image_array)
+            detected_plates = []
 
-                # Usar o método existente de detecção
-                detected_plates = self.detect_plates(temp_path)
+            for result_idx, result in enumerate(results):
+                boxes = result.boxes
 
-                # Limpar arquivo temporário
-                os.unlink(temp_path)
+                if len(boxes) == 0:
+                    continue
 
-                return detected_plates
+                for plate_idx, box in enumerate(boxes):
+                    try:
+                        # Extrair coordenadas
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+                        confidence = float(box.conf[0])
+
+                        # Adicionar padding
+                        padding = 5
+                        y1_pad = max(0, y1 - padding)
+                        y2_pad = min(image_array.shape[0], y2 + padding)
+                        x1_pad = max(0, x1 - padding)
+                        x2_pad = min(image_array.shape[1], x2 + padding)
+
+                        # Cortar placa
+                        cropped_plate = image_array[y1_pad:y2_pad, x1_pad:x2_pad].copy()
+
+                        if cropped_plate.size == 0:
+                            continue
+
+                        detected_plates.append({
+                            'plate_number': len(detected_plates) + 1,
+                            'bounding_box': {
+                                'x1': int(x1), 'y1': int(y1),
+                                'x2': int(x2), 'y2': int(y2)
+                            },
+                            'confidence': confidence,
+                            'cropped_image': cropped_plate
+                        })
+
+                    except Exception as e:
+                        logger.error(f"Erro ao processar placa {plate_idx}: {e}")
+                        continue
+
+            return detected_plates
 
         except Exception as e:
-            print(f"Erro na detecção de placas do array: {e}")
+            logger.error(f"Erro na detecção de placas do array: {e}")
             return []
 
     def process_plate_ocr_fast(self, cropped_image):
@@ -340,12 +366,6 @@ class PlateDetectorService:
             Dicionário com o melhor texto e confiança
         """
         try:
-            # Se você já tem um método de OCR, adapte-o aqui
-            # Caso contrário, aqui está uma implementação básica usando pytesseract
-
-            import pytesseract
-            from PIL import Image
-
             # Converter de BGR para RGB se necessário
             if len(cropped_image.shape) == 3:
                 rgb_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB)

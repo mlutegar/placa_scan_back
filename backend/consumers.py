@@ -6,6 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 import threading
 import time
 import numpy as np
+import tempfile
 
 from backend.services.plate_detector import PlateDetectorService
 import logging
@@ -201,6 +202,7 @@ class VideoStreamConsumer(AsyncWebsocketConsumer):
                 )
 
                 if should_detect:
+                    time.sleep(0.05)  # Pequeno delay antes da detecção
                     detected_plates = self.detect_plates_in_frame(frame.copy())
                     self.last_detection_time = current_time
 
@@ -276,7 +278,9 @@ class VideoStreamConsumer(AsyncWebsocketConsumer):
             return plates_with_text
 
         except Exception as e:
-            logger.error(f"Erro na detecção de placas: {e}")
+            logger.error(f"Erro na detecção de placas do array: {e}")
+            # Aumentar delay para evitar processamento muito rápido
+            time.sleep(0.2)
             return []
 
     def is_duplicate_detection(self, new_plate):

@@ -8,3 +8,4 @@ websockets
 opencv-python-headless
 channels_redis
 daphne
+pytesseract
