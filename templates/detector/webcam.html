@@ -3,464 +3,277 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detector de Placas - Webcam</title>
+    <title>Visualizador de Vídeo via WebSocket</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
+            margin: 20px;
+            background-color: #f5f5f5;
+            color: #333;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
             background: white;
-            border-radius: 10px;
             padding: 20px;
+            border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        .header {
+        h1 {
             text-align: center;
+            color: #2c3e50;
             margin-bottom: 30px;
         }
 
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+        #videoFeed {
+            display: block;
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            border: 2px solid #ddd;
+            background-color: #000;
+            margin: 0 auto 20px auto;
+            border-radius: 4px;
         }
 
-        button {
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .controls label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .controls input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            margin-right: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .controls button {
             padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
+            margin: 0 5px;
             cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
             transition: background-color 0.3s;
         }
 
-        .btn-start {
-            background-color: #4CAF50;
-            color: white;
+        .controls button:hover:not(:disabled) {
+            background-color: #2980b9;
         }
 
-        .btn-start:hover {
-            background-color: #45a049;
+        .controls button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
         }
 
-        .btn-stop {
-            background-color: #f44336;
-            color: white;
+        .controls button.stop {
+            background-color: #e74c3c;
         }
 
-        .btn-stop:hover {
-            background-color: #da190b;
+        .controls button.stop:hover:not(:disabled) {
+            background-color: #c0392b;
         }
 
-        .btn-upload {
-            background-color: #2196F3;
-            color: white;
-        }
-
-        .btn-upload:hover {
-            background-color: #0b7dda;
-        }
-
-        .video-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        #videoFrame {
-            max-width: 100%;
-            height: auto;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-        }
-
-        .status {
-            text-align: center;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-        }
-
-        .status.connected {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .status.info {
-            background-color: #cce7ff;
-            color: #004085;
-            border: 1px solid #99d3ff;
-        }
-
-        .detections {
+        #status {
             margin-top: 20px;
-        }
-
-        .detection-item {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
             padding: 15px;
-            margin-bottom: 10px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
         }
 
-        .detection-item h4 {
-            margin: 0 0 10px 0;
-            color: #28a745;
+        #status.error {
+            background-color: #fdf2f2;
+            border-left-color: #e74c3c;
+            color: #721c24;
         }
 
-        .detection-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
+        #status.success {
+            background-color: #f0fff4;
+            border-left-color: #27ae60;
+            color: #155724;
+        }
+
+        .info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e8f4fd;
+            border-radius: 4px;
             font-size: 14px;
+            color: #0c5460;
         }
 
-        .settings {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-
-        .settings label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        .settings select, .settings input {
-            width: 100%;
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            margin-bottom: 10px;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-item {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
+        .loading {
             text-align: center;
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
+            color: #7f8c8d;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🚗 Detector de Placas Veiculares</h1>
-            <p>Sistema de reconhecimento de placas em tempo real</p>
-        </div>
+        <h1>📹 Visualizador de Câmera</h1>
 
-        <div class="settings">
-            <h3>⚙️ Configurações</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                <div>
-                    <label for="cameraSelect">Câmera:</label>
-                    <select id="cameraSelect">
-                        <option value="0">Câmera padrão (0)</option>
-                        <option value="1">Câmera 1</option>
-                        <option value="2">Câmera 2</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="detectionFreq">Frequência de Detecção:</label>
-                    <select id="detectionFreq">
-                        <option value="5">Muito Alta (5 frames)</option>
-                        <option value="10" selected>Alta (10 frames)</option>
-                        <option value="20">Média (20 frames)</option>
-                        <option value="30">Baixa (30 frames)</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-number" id="frameCount">0</div>
-                <div class="stat-label">Frames Processados</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="plateCount">0</div>
-                <div class="stat-label">Placas Detectadas</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="fps">0</div>
-                <div class="stat-label">FPS</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="connectionStatus">❌</div>
-                <div class="stat-label">Conexão</div>
-            </div>
-        </div>
+        <img id="videoFeed" alt="Feed da Câmera" style="display: none;">
+        <div id="loadingMessage" class="loading">Conectando ao WebSocket...</div>
 
         <div class="controls">
-            <button id="startBtn" class="btn-start">📹 Iniciar Câmera</button>
-            <button id="stopBtn" class="btn-stop">⏹️ Parar Câmera</button>
-            <button id="uploadBtn" class="btn-upload">📁 Upload Imagem</button>
-            <input type="file" id="fileInput" accept="image/*">
+            <label for="cameraId">ID da Câmera:</label>
+            <input type="number" id="cameraId" value="0" min="0" max="10">
+            <button id="startButton" disabled>▶️ Iniciar Câmera</button>
+            <button id="stopButton" class="stop" disabled>⏹️ Parar Câmera</button>
         </div>
 
-        <div id="status" class="status info">
-            Conectando ao servidor...
-        </div>
+        <div id="status">Conectando ao WebSocket...</div>
 
-        <div class="video-container">
-            <img id="videoFrame" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5BZ3VhcmRhbmRvIHbDrWRlby4uLjwvdGV4dD48L3N2Zz4=" alt="Aguardando vídeo...">
-        </div>
-
-        <div id="detections" class="detections">
-            <h3>🎯 Detecções Recentes</h3>
-            <div id="detectionsList">
-                <p>Nenhuma detecção ainda.</p>
-            </div>
+        <div class="info">
+            <strong>💡 Dicas:</strong><br>
+            • Se a câmera não funcionar, tente IDs diferentes (0, 1, 2...)<br>
+            • Certifique-se de que nenhum outro programa está usando a câmera<br>
+            • Esta versão apenas mostra o vídeo, sem processamento de placas
         </div>
     </div>
 
     <script>
-        class PlateDetectorApp {
-            constructor() {
-                this.ws = null;
-                this.isStreaming = false;
-                this.frameCount = 0;
-                this.plateCount = 0;
-                this.lastFrameTime = Date.now();
-                this.recentDetections = [];
+        const videoFeed = document.getElementById('videoFeed');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const cameraIdInput = document.getElementById('cameraId');
+        const statusDiv = document.getElementById('status');
 
-                this.initElements();
-                this.initWebSocket();
-                this.bindEvents();
-            }
+        const socketUrl = `ws://${window.location.hostname}:8000/ws/video-stream/`;
+        let socket;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
 
-            initElements() {
-                this.startBtn = document.getElementById('startBtn');
-                this.stopBtn = document.getElementById('stopBtn');
-                this.uploadBtn = document.getElementById('uploadBtn');
-                this.fileInput = document.getElementById('fileInput');
-                this.videoFrame = document.getElementById('videoFrame');
-                this.status = document.getElementById('status');
-                this.detectionsList = document.getElementById('detectionsList');
-                this.cameraSelect = document.getElementById('cameraSelect');
-                this.detectionFreq = document.getElementById('detectionFreq');
-
-                this.frameCountEl = document.getElementById('frameCount');
-                this.plateCountEl = document.getElementById('plateCount');
-                this.fpsEl = document.getElementById('fps');
-                this.connectionStatusEl = document.getElementById('connectionStatus');
-            }
-
-            initWebSocket() {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.host}/ws/video-stream/`;
-
-                this.ws = new WebSocket(wsUrl);
-
-                this.ws.onopen = () => {
-                    this.updateStatus('Conectado ao servidor!', 'connected');
-                    this.connectionStatusEl.textContent = '✅';
-                };
-
-                this.ws.onmessage = (event) => {
-                    this.handleMessage(JSON.parse(event.data));
-                };
-
-                this.ws.onclose = () => {
-                    this.updateStatus('Conexão perdida. Tentando reconectar...', 'error');
-                    this.connectionStatusEl.textContent = '❌';
-                    setTimeout(() => this.initWebSocket(), 3000);
-                };
-
-                this.ws.onerror = (error) => {
-                    this.updateStatus('Erro de conexão', 'error');
-                    this.connectionStatusEl.textContent = '❌';
-                };
-            }
-
-            bindEvents() {
-                this.startBtn.onclick = () => this.startCamera();
-                this.stopBtn.onclick = () => this.stopCamera();
-                this.uploadBtn.onclick = () => this.fileInput.click();
-                this.fileInput.onchange = (e) => this.handleFileUpload(e);
-
-                this.detectionFreq.onchange = () => {
-                    this.sendMessage({
-                        command: 'change_detection_frequency',
-                        frequency: parseInt(this.detectionFreq.value)
-                    });
-                };
-            }
-
-            startCamera() {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    const cameraId = parseInt(this.cameraSelect.value);
-                    this.sendMessage({
-                        command: 'start_camera',
-                        camera_id: cameraId
-                    });
-                    this.isStreaming = true;
-                    this.startBtn.disabled = true;
-                    this.stopBtn.disabled = false;
-                }
-            }
-
-            stopCamera() {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this.sendMessage({ command: 'stop_camera' });
-                    this.isStreaming = false;
-                    this.startBtn.disabled = false;
-                    this.stopBtn.disabled = true;
-                }
-            }
-
-            handleFileUpload(event) {
-                const file = event.target.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        this.sendMessage({
-                            command: 'process_frame',
-                            frame: e.target.result
-                        });
-                    };
-                    reader.readAsDataURL(file);
-                }
-            }
-
-            sendMessage(message) {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this.ws.send(JSON.stringify(message));
-                }
-            }
-
-            handleMessage(data) {
-                switch (data.type) {
-                    case 'frame':
-                        this.updateFrame(data);
-                        break;
-                    case 'processed_frame':
-                        this.updateProcessedFrame(data);
-                        break;
-                    case 'camera_started':
-                        this.updateStatus(data.message, 'connected');
-                        break;
-                    case 'camera_stopped':
-                        this.updateStatus(data.message, 'info');
-                        break;
-                    case 'error':
-                        this.updateStatus(data.message, 'error');
-                        break;
-                    case 'connection':
-                        this.updateStatus(data.message, 'connected');
-                        break;
-                }
-            }
-
-            updateFrame(data) {
-                this.videoFrame.src = `data:image/jpeg;base64,${data.frame}`;
-                this.frameCount = data.frame_count || this.frameCount + 1;
-                this.frameCountEl.textContent = this.frameCount;
-
-                // Calcular FPS
-                const now = Date.now();
-                const fps = Math.round(1000 / (now - this.lastFrameTime));
-                this.fpsEl.textContent = fps;
-                this.lastFrameTime = now;
-
-                if (data.plates && data.plates.length > 0) {
-                    this.plateCount += data.plates.length;
-                    this.plateCountEl.textContent = this.plateCount;
-                    this.updateDetections(data.plates);
-                }
-            }
-
-            updateProcessedFrame(data) {
-                this.videoFrame.src = `data:image/jpeg;base64,${data.frame}`;
-                if (data.plates && data.plates.length > 0) {
-                    this.updateDetections(data.plates);
-                }
-            }
-
-            updateDetections(plates) {
-                plates.forEach(plate => {
-                    this.recentDetections.unshift({
-                        ...plate,
-                        timestamp: new Date().toLocaleTimeString()
-                    });
-                });
-
-                // Manter apenas as 10 detecções mais recentes
-                this.recentDetections = this.recentDetections.slice(0, 10);
-                this.renderDetections();
-            }
-
-            renderDetections() {
-                if (this.recentDetections.length === 0) {
-                    this.detectionsList.innerHTML = '<p>Nenhuma detecção ainda.</p>';
-                    return;
-                }
-
-                this.detectionsList.innerHTML = this.recentDetections.map(detection => `
-                    <div class="detection-item">
-                        <h4>Placa: ${detection.text || 'N/A'}</h4>
-                        <div class="detection-info">
-                            <div><strong>Confiança:</strong> ${(detection.text_confidence || 0).toFixed(1)}%</div>
-                            <div><strong>Horário:</strong> ${detection.timestamp}</div>
-                            <div><strong>Posição:</strong> ${detection.bounding_box ?
-                                `[${detection.bounding_box.map(v => Math.round(v)).join(', ')}]` : 'N/A'}</div>
-                            <div><strong>Confiança Detecção:</strong> ${(detection.confidence || 0).toFixed(1)}%</div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            updateStatus(message, type) {
-                this.status.textContent = message;
-                this.status.className = `status ${type}`;
-            }
+        function updateStatus(message, type = 'info') {
+            statusDiv.textContent = message;
+            statusDiv.className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            console.log(`[${type.toUpperCase()}] ${message}`);
         }
 
-        // Inicializar aplicação quando a página carregar
-        document.addEventListener('DOMContentLoaded', () => {
-            new PlateDetectorApp();
+        function connectWebSocket() {
+            updateStatus("Conectando ao WebSocket...");
+            socket = new WebSocket(socketUrl);
+
+            socket.onopen = function(e) {
+                updateStatus("✅ WebSocket conectado com sucesso!", 'success');
+                startButton.disabled = false;
+                reconnectAttempts = 0;
+            };
+
+            socket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'frame') {
+                        // Mostrar vídeo
+                        videoFeed.src = 'data:image/jpeg;base64,' + data.frame;
+                        if (videoFeed.style.display === 'none') {
+                            videoFeed.style.display = 'block';
+                            loadingMessage.style.display = 'none';
+                        }
+
+                    } else if (data.type === 'camera_started') {
+                        updateStatus(`✅ ${data.message}`, 'success');
+                        startButton.disabled = true;
+                        stopButton.disabled = false;
+
+                    } else if (data.type === 'camera_stopped') {
+                        updateStatus(`⏹️ ${data.message}`);
+                        startButton.disabled = false;
+                        stopButton.disabled = true;
+                        videoFeed.style.display = 'none';
+                        loadingMessage.style.display = 'block';
+                        loadingMessage.textContent = 'Câmera parada';
+
+                    } else if (data.type === 'error') {
+                        updateStatus(`❌ ${data.message}`, 'error');
+                        startButton.disabled = false;
+                        stopButton.disabled = true;
+
+                    } else if (data.type === 'connection') {
+                        updateStatus(`🔗 ${data.message}`, 'success');
+                    }
+
+                } catch (e) {
+                    console.error('Erro ao processar mensagem:', e);
+                }
+            };
+
+            socket.onclose = function(event) {
+                startButton.disabled = true;
+                stopButton.disabled = true;
+                videoFeed.style.display = 'none';
+                loadingMessage.style.display = 'block';
+
+                if (event.wasClean) {
+                    updateStatus(`🔌 Conexão fechada (código: ${event.code})`);
+                    loadingMessage.textContent = 'Desconectado';
+                } else {
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        updateStatus(`❌ Conexão perdida. Tentativa ${reconnectAttempts}/${maxReconnectAttempts} em 3s...`, 'error');
+                        loadingMessage.textContent = 'Reconectando...';
+                        setTimeout(connectWebSocket, 3000);
+                    } else {
+                        updateStatus('❌ Não foi possível reconectar. Recarregue a página.', 'error');
+                        loadingMessage.textContent = 'Erro de conexão';
+                    }
+                }
+            };
+
+            socket.onerror = function(error) {
+                updateStatus('📛 Erro no WebSocket', 'error');
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        startButton.onclick = function() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const camId = parseInt(cameraIdInput.value, 10);
+                const message = {
+                    command: 'start_camera',
+                    camera_id: camId
+                };
+                socket.send(JSON.stringify(message));
+                updateStatus(`📹 Tentando iniciar câmera ${camId}...`);
+                loadingMessage.style.display = 'block';
+                loadingMessage.textContent = 'Iniciando câmera...';
+            } else {
+                updateStatus("❌ WebSocket não está conectado", 'error');
+            }
+        };
+
+        stopButton.onclick = function() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ command: 'stop_camera' }));
+                updateStatus("⏹️ Parando câmera...");
+            } else {
+                updateStatus("❌ WebSocket não está conectado", 'error');
+            }
+        };
+
+        // Conectar automaticamente quando a página carregar
+        connectWebSocket();
+
+        // Limpar recursos ao sair da página
+        window.addEventListener('beforeunload', function() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ command: 'stop_camera' }));
+                socket.close();
+            }
         });
     </script>
 </body>
