@@ -15,8 +15,75 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+        'detailed': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'detailed',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+            'formatter': 'detailed',
+        },
+        'plate_detection_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'plate_detection.log'),
+            'maxBytes': 1024*1024*5,  # 5 MB
+            'backupCount': 5,
+            'formatter': 'detailed',
+        },
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'errors.log'),
+            'maxBytes': 1024*1024*5,  # 5 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'level': 'ERROR',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        # Logger específico para seu app de detecção de placas
+        'your_app_name.views': {  # Substitua 'your_app_name' pelo nome real do seu app
+            'handlers': ['console', 'plate_detection_file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Logger para todos os módulos do seu app
+        'your_app_name': {  # Substitua 'your_app_name' pelo nome real do seu app
+            'handlers': ['console', 'plate_detection_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Logger root para capturar tudo
+        'root': {
+            'handlers': ['console', 'error_file'],
+            'level': 'WARNING',
+        },
+    },
+}
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-dr##-n@f88@(dj0bpylb72wuz$f@xc$9dq-)^n#a_j_-174^*5'
@@ -141,3 +208,7 @@ DETECTION_RESULTS_DIR = os.path.join(MEDIA_ROOT, 'detection_results')
 YOLO_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'placa-veicular-model.pt')
 EASYOCR_LANGUAGES = ['en', 'pt']
 CONFIDENCE_THRESHOLDS = [0.0, 0.2, 0.4, 0.6, 0.8]
+
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
