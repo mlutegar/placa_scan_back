@@ -6,11 +6,10 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.conf import settings
 import os
 import logging
 
-from .models import PlateDetection, DetectedPlate
+from .models import PlateDetection, DetectedPlate, KnownPlate
 from .serializers import PlateDetectionSerializer, DetectedPlateSerializer
 from .services.plate_detector import PlateDetectorService
 
@@ -78,7 +77,7 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
                     )
 
                     # Salvar imagem cortada
-                    filename = f"plate_{detection.id}_{plate_data['plate_number']}.jpg"
+                    filename = f"plate_{detection.id}_{uuid.uuid4().hex[:8]}.jpg"
                     cropped_file = detector_service.save_cropped_plate(
                         plate_data['cropped_image'], filename
                     )
@@ -86,7 +85,7 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
                     # Criar registro da placa
                     detected_plate = DetectedPlate.objects.create(
                         detection=detection,
-                        plate_number=plate_data['plate_number'],
+                        plate_number_detected=ocr_results['best_text'],  # Usar o resultado do OCR
                         bounding_box=plate_data['bounding_box'],
                         yolo_confidence=plate_data['confidence'],
                         cropped_image=cropped_file,
@@ -97,7 +96,7 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
 
                     plates_data.append({
                         'id': detected_plate.id,
-                        'plate_number': detected_plate.plate_number,
+                        'plate_number_detected': detected_plate.plate_number_detected,
                         'bounding_box': detected_plate.bounding_box,
                         'yolo_confidence': detected_plate.yolo_confidence,
                         'cropped_image_url': detected_plate.cropped_image.url,
@@ -201,3 +200,32 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def list_detections(self, request):
+        """Lista todas as detecções com paginação"""
+        detections = PlateDetection.objects.all().order_by('-created_at')
+        serializer = self.get_serializer(detections, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'])
+    def update_status(self, request, pk=None):
+        """Atualiza status de uma detecção"""
+        detection = get_object_or_404(PlateDetection, pk=pk)
+
+        if 'status' in request.data:
+            detection.status = request.data['status']
+        if 'processed_at' in request.data:
+            detection.processed_at = timezone.now()
+
+        detection.save()
+        return Response(PlateDetectionSerializer(detection).data)
+
+
+class DetectedPlateViewSet(viewsets.ModelViewSet):
+    queryset = DetectedPlate.objects.all()
+    serializer_class = DetectedPlateSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Criar nova placa detectada"""
+        return super().create(request, *args, **kwargs)
