@@ -201,3 +201,32 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def list_detections(self, request):
+        """Lista todas as detecções com paginação"""
+        detections = PlateDetection.objects.all().order_by('-created_at')
+        serializer = self.get_serializer(detections, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'])
+    def update_status(self, request, pk=None):
+        """Atualiza status de uma detecção"""
+        detection = get_object_or_404(PlateDetection, pk=pk)
+
+        if 'status' in request.data:
+            detection.status = request.data['status']
+        if 'processed_at' in request.data:
+            detection.processed_at = timezone.now()
+
+        detection.save()
+        return Response(PlateDetectionSerializer(detection).data)
+
+
+class DetectedPlateViewSet(viewsets.ModelViewSet):
+    queryset = DetectedPlate.objects.all()
+    serializer_class = DetectedPlateSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Criar nova placa detectada"""
+        return super().create(request, *args, **kwargs)
