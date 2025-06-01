@@ -223,7 +223,9 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
 
 
 class DetectedPlateViewSet(viewsets.ModelViewSet):
-    queryset = DetectedPlate.objects.all()
+    # Ordenar por data de criação da detecção (mais recentes primeiro), e depois por ID.
+    # O select_related('detection') otimiza a busca do created_at da detecção.
+    queryset = DetectedPlate.objects.select_related('detection').all().order_by('-detection__created_at', '-id')
     serializer_class = DetectedPlateSerializer
 
     def create(self, request, *args, **kwargs):

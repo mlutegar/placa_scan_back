@@ -4,5 +4,6 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'detections', views.PlateDetectionViewSet)
+router.register(r'detected-plates', views.DetectedPlateViewSet)
 
 urlpatterns = [] + router.urls
