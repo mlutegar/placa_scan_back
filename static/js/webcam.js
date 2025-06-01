@@ -24,8 +24,11 @@ const maxReconnectAttempts = 5;
 
 // Variáveis de controle
 let detectionEnabled = true;
-let detectedPlates = [];
+let detectedPlates = []; // Mantém as placas para exibição na UI
 let startTime = Date.now();
+let isSavingFrame = false; // Flag para controlar o envio de frames para salvamento
+const SAVE_FRAME_INTERVAL = 5000; // Salvar no máximo um frame a cada 5 segundos
+let lastSaveTime = 0;
 
 // Atualizar status
 function updateStatus(message, type = 'info') {
@@ -84,6 +87,91 @@ function connectWebSocket() {
     };
 }
 
+// ++ ADICIONAR: Função para converter base64 para Blob ++
+function base64ToBlob(base64, contentType = '', sliceSize = 512) {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, { type: contentType });
+}
+
+// ++ ADICIONAR: Função para obter o cookie CSRF ++
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ++ ADICIONAR: Função para enviar o frame ao backend para salvamento ++
+async function saveFrameToServer(frameBase64) {
+    if (isSavingFrame) {
+        // console.log("Salvamento de frame já em progresso.");
+        return;
+    }
+    const now = Date.now();
+    if (now - lastSaveTime < SAVE_FRAME_INTERVAL) {
+        // console.log("Intervalo mínimo entre salvamentos não atingido.");
+        return;
+    }
+
+    isSavingFrame = true;
+    lastSaveTime = now;
+    updateStatus("📡 Enviando frame para salvamento...", 'info');
+
+    try {
+        const imageBlob = base64ToBlob(frameBase64, 'image/jpeg');
+        const formData = new FormData();
+        const timestamp = new Date().toISOString();
+        formData.append('original_image', imageBlob, `frame_${timestamp}.jpg`);
+
+        const csrfToken = getCookie('csrftoken');
+
+        const response = await fetch('/api/detections/detect_plates/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                // 'Content-Type': 'multipart/form-data' é definido automaticamente pelo navegador para FormData
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Frame salvo com sucesso. Detecção ID:', result.id, 'Placas:', result.plates);
+            updateStatus(`🖼️ Frame salvo (ID: ${result.id}), ${result.plates ? result.plates.length : 0} placa(s) processada(s).`, 'success');
+        } else {
+            const errorData = await response.json();
+            console.error('Erro ao salvar frame:', response.status, errorData);
+            updateStatus(`⚠️ Erro ao salvar frame: ${errorData.error || response.statusText}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro na requisição fetch para salvar frame:', error);
+        updateStatus(`📛 Erro de rede ao salvar frame.`, 'error');
+    } finally {
+        isSavingFrame = false;
+    }
+}
+
 // Manipular mensagens WebSocket
 function handleWebSocketMessage(data) {
     switch(data.type) {
@@ -95,9 +183,21 @@ function handleWebSocketMessage(data) {
                 loadingOverlay.style.display = 'none';
             }
 
-            // Processar placas detectadas
+            // Processar placas detectadas para exibição
             if (data.plates && data.plates.length > 0) {
-                processDetectedPlates(data.plates);
+                processDetectedPlatesForDisplay(data.plates); // Renomeada para clareza
+            }
+
+            // ++ ALTERAR/ADICIONAR: Lógica para decidir enviar o frame para o backend ++
+            // Condição para salvar: se a detecção estiver habilitada,
+            // houver um frame e placas detectadas nele.
+            if (detectionEnabled && data.frame && data.plates && data.plates.length > 0) {
+                // Poderia haver uma lógica mais sofisticada aqui para decidir
+                // quais frames salvar (ex: apenas se uma nova placa única aparecer,
+                // ou com base na confiança, etc.)
+                // Por ora, tentaremos salvar se houver placas.
+                // A função saveFrameToServer() já tem um controle de taxa.
+                saveFrameToServer(data.frame);
             }
             break;
 
@@ -106,8 +206,10 @@ function handleWebSocketMessage(data) {
             startButton.disabled = true;
             stopButton.disabled = false;
             startTime = Date.now();
-            detectedPlates = [];
+            detectedPlates = []; // Limpa placas da UI
+            updatePlatesList(); // Atualiza UI
             updateStatistics();
+            lastSaveTime = 0; // Resetar o tempo do último salvamento
             break;
 
         case 'camera_stopped':
@@ -142,7 +244,7 @@ function handleWebSocketMessage(data) {
 }
 
 // Processar placas detectadas
-function processDetectedPlates(plates) {
+function processDetectedPlatesForDisplay(plates) {
     plates.forEach(plate => {
         // Adicionar timestamp
         plate.timestamp = new Date().toLocaleTimeString();
