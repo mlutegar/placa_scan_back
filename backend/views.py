@@ -90,7 +90,7 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
                         if query_plate_text:  # Procede apenas se o texto validado não for vazio
                             # --- INÍCIO DA LÓGICA DE BUSCA POR SIMILARIDADE (adaptada de process_frame) ---
                             # SIMILARITY_THRESHOLD pode ser o mesmo usado em process_frame ou configurável separadamente
-                            SIMILARITY_THRESHOLD = 85  # Exemplo: 85% (ajuste conforme necessário)
+                            SIMILARITY_THRESHOLD = 50  # Exemplo: 85% (ajuste conforme necessário)
 
                             all_known_plates_qs = KnownPlate.objects.all()  # Performance: considerar otimizações para tabelas grandes
 

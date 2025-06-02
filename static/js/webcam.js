@@ -256,34 +256,50 @@ async function fetchPlatesFromDB() {
 
         // Mapear os dados do backend para o formato que updatePlatesList espera
         detectedPlates = platesFromDB.map(plate => {
-            const text = plate.best_ocr_text || plate.plate_number_detected || "N/A";
-            // A lógica para is_valid e plate_type dependerá do seu backend/serializer
-            // Exemplo de placeholders se não vierem do backend:
-            const isValid = plate.is_known || false; // Assumindo que 'is_known' vem do serializer
-            const plateType = plate.plate_type || 'Desconhecido'; // Assumindo que 'plate_type' vem do serializer
+            const knownNum = plate.known_plate_number;
+            // Prioriza plate_number_detected, depois best_ocr_text como a placa detectada.
+            const detectedNum = plate.plate_number_detected || plate.best_ocr_text;
+
+            let htmlFormattedPlateText;
+            let simplePlateText; // Para uso em atributos 'alt' ou contextos não-HTML
+
+            if (knownNum) {
+                htmlFormattedPlateText = `<div><span class="plate-label">Placa Conhecida:</span> ${knownNum}</div>`;
+                // Sempre mostrar a detectada se a conhecida estiver presente, para clareza.
+                htmlFormattedPlateText += `<div><span class="plate-label">Placa Detectada:</span> ${detectedNum || "N/A"}</div>`;
+
+                simplePlateText = `${knownNum}`;
+                if (detectedNum && knownNum !== detectedNum) {
+                    simplePlateText += ` (Detectada: ${detectedNum})`;
+                } else if (!detectedNum) {
+                    simplePlateText += ` (Detectada: N/A)`;
+                }
+            } else {
+                htmlFormattedPlateText = `<div><span class="plate-label">Placa Detectada:</span> ${detectedNum || "N/A"}</div>`;
+                simplePlateText = detectedNum || "N/A";
+            }
+
+            const isValid = !!plate.known_plate;
 
             return {
                 id: plate.id,
-                text: text,
-                formatted_text: text, // Você pode adicionar uma formatação específica aqui se necessário
+                text: simplePlateText, // Texto simples para 'alt' e outros.
+                formatted_text: htmlFormattedPlateText, // HTML formatado para exibição principal.
                 confidence: plate.best_ocr_confidence !== null && plate.best_ocr_confidence !== undefined
                     ? plate.best_ocr_confidence * 100
-                    : 0, // Confiança do OCR
+                    : 0,
                 yolo_confidence: plate.yolo_confidence !== null && plate.yolo_confidence !== undefined
                     ? plate.yolo_confidence * 100
-                    : 0, // Confiança do YOLO
-                plate_type: plateType,
+                    : 0,
                 timestamp: plate.detection_created_at
-                    ? new Date(plate.detection_created_at).toLocaleString() // Data e hora formatadas
+                    ? new Date(plate.detection_created_at).toLocaleString()
                     : 'N/A',
                 is_valid: isValid,
-                cropped_image_url: plate.cropped_image_url, // Para exibir a imagem da placa
-                raw_timestamp: plate.detection_created_at // Para ordenação se necessário
+                cropped_image_url: plate.cropped_image_url,
+                raw_timestamp: plate.detection_created_at,
+                known_plate_is_regularized: plate.known_plate_is_regularized // Mantém da alteração anterior
             };
         });
-
-        // Ordenar no cliente se o backend não garantir (embora já tenhamos configurado no queryset)
-        // detectedPlates.sort((a, b) => (new Date(b.raw_timestamp) || 0) - (new Date(a.raw_timestamp) || 0));
 
         updatePlatesList();
         updateStatistics(); // As estatísticas também devem se basear nas placas do banco
@@ -311,29 +327,43 @@ function updatePlatesList() {
         return;
     }
 
-    platesList.innerHTML = detectedPlates.map(plate => `
-    <div class="plate-item ${plate.is_valid ? '' : 'invalid'}">
-        ${plate.cropped_image_url ? `
-            <div class="plate-image-container">
-                <img src="${plate.cropped_image_url}" alt="Placa ${plate.text}" class="plate-thumbnail">
+    platesList.innerHTML = detectedPlates.map(plate => {
+        let regularizationDisplayHtml;
+        // Verifica se a propriedade known_plate_is_regularized existe e é um booleano
+        if (typeof plate.known_plate_is_regularized === 'boolean') {
+            if (plate.known_plate_is_regularized) {
+                regularizationDisplayHtml = `<span class="plate-status regularizada">✅ Regularizada</span>`;
+            } else {
+                regularizationDisplayHtml = `<span class="plate-status nao-regularizada">❌ Não Regularizada</span>`;
+            }
+        } else {
+            // Caso a placa não seja conhecida ou o status de regularização não esteja disponível
+            regularizationDisplayHtml = `<span class="plate-status status-desconhecido">❔ Status Desconhecido</span>`;
+        }
+
+        return `
+        <div class="plate-item ${plate.is_valid ? '' : 'invalid'}">
+            ${plate.cropped_image_url ? `
+                <div class="plate-image-container">
+                    <img src="${plate.cropped_image_url}" alt="Placa ${plate.text}" class="plate-thumbnail">
+                </div>
+            ` : ''}
+            <div class="plate-info-details">
+                <div class="plate-text">${plate.formatted_text || plate.text}</div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" style="width: ${plate.confidence.toFixed(1)}%"></div>
+                </div>
+                <div class="plate-details">
+                    ${regularizationDisplayHtml}
+                    <span class="timestamp">${plate.timestamp}</span>
+                </div>
+                <div class="plate-details">
+                    <span>OCR: ${plate.confidence.toFixed(1)}%</span>
+                    <span>YOLO: ${plate.yolo_confidence.toFixed(1)}%</span>
+                </div>
             </div>
-        ` : ''}
-        <div class="plate-info-details"> <!-- Wrapper para o texto -->
-            <div class="plate-text">${plate.formatted_text || plate.text}</div>
-            <div class="confidence-bar">
-                <div class="confidence-fill" style="width: ${plate.confidence.toFixed(1)}%"></div>
-            </div>
-            <div class="plate-details">
-                <span class="plate-type ${String(plate.plate_type).toLowerCase()}">${plate.plate_type || 'desconhecido'}</span>
-                <span class="timestamp">${plate.timestamp}</span>
-            </div>
-            <div class="plate-details">
-                <span>OCR: ${plate.confidence.toFixed(1)}%</span>
-                <span>YOLO: ${plate.yolo_confidence.toFixed(1)}%</span>
-            </div>
-        </div>
-    </div>
-`).join('');
+        </div>`;
+    }).join('');
 }
 
 // Limpar lista de placas

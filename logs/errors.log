@@ -4,3 +4,10 @@ ERROR 2025-06-01 20:42:29,141 consumers 9768 6916 Erro ao inicializar detector d
 ERROR 2025-06-01 20:42:59,398 consumers 9768 6916 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
 ERROR 2025-06-01 20:44:29,053 consumers 19744 11812 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
 ERROR 2025-06-01 20:49:36,091 consumers 10912 18196 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-01 20:54:17,021 consumers 20348 21432 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-01 20:54:22,445 consumers 20348 21432 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-01 20:54:51,502 consumers 20348 21432 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-01 20:55:11,458 consumers 20348 21432 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-01 20:57:47,238 consumers 8036 21456 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-01 20:57:52,380 consumers 8036 21456 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-01 21:01:08,289 consumers 11948 9856 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
