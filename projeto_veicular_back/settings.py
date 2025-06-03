@@ -89,7 +89,7 @@ LOGGING = {
 SECRET_KEY = 'django-insecure-dr##-n@f88@(dj0bpylb72wuz$f@xc$9dq-)^n#a_j_-174^*5'
 
 DEBUG = True
-ALLOWED_HOSTS = ['*', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*', '127.0.0.2', 'localhost']
 
 # Application definition
 
@@ -113,7 +113,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],  # Ou o endereço do seu servidor Redis
+            "hosts": [("127.0.0.2", 6379)],  # Ou o endereço do seu servidor Redis
         },
     },
 }

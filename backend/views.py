@@ -87,15 +87,10 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
                         # Validar e formatar o texto da placa para a consulta
                         _, query_plate_text, _ = detector_service.validate_plate_text(plate_text_from_ocr)
 
-                        if query_plate_text:  # Procede apenas se o texto validado não for vazio
-                            # --- INÍCIO DA LÓGICA DE BUSCA POR SIMILARIDADE (adaptada de process_frame) ---
-                            # SIMILARITY_THRESHOLD pode ser o mesmo usado em process_frame ou configurável separadamente
-                            SIMILARITY_THRESHOLD = 50  # Exemplo: 85% (ajuste conforme necessário)
-
-                            all_known_plates_qs = KnownPlate.objects.all()  # Performance: considerar otimizações para tabelas grandes
-
+                        if query_plate_text:
+                            SIMILARITY_THRESHOLD = 50
+                            all_known_plates_qs = KnownPlate.objects.all()
                             best_match_for_this_ocr = None
-                            # current_highest_similarity já foi inicializado como 0
 
                             for db_plate in all_known_plates_qs:
                                 score = fuzz.ratio(query_plate_text, db_plate.plate_number)
@@ -437,7 +432,6 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'])
     def update_status(self, request, pk=None):
-        """Atualiza status de uma detecção"""
         detection = get_object_or_404(PlateDetection, pk=pk)
 
         if 'status' in request.data:
@@ -450,8 +444,6 @@ class PlateDetectionViewSet(viewsets.ModelViewSet):
 
 
 class DetectedPlateViewSet(viewsets.ModelViewSet):
-    # Ordenar por data de criação da detecção (mais recentes primeiro), e depois por ID.
-    # O select_related('detection') otimiza a busca do created_at da detecção.
     queryset = DetectedPlate.objects.select_related('detection').all().order_by('-detection__created_at', '-id')
     serializer_class = DetectedPlateSerializer
 

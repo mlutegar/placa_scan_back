@@ -11,3 +11,190 @@ ERROR 2025-06-01 20:55:11,458 consumers 20348 21432 Erro ao inicializar detector
 ERROR 2025-06-01 20:57:47,238 consumers 8036 21456 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
 ERROR 2025-06-01 20:57:52,380 consumers 8036 21456 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
 ERROR 2025-06-01 21:01:08,289 consumers 11948 9856 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+CRITICAL 2025-06-03 14:20:02,818 server 16748 16832 Listen failure: Couldn't listen on 127.0.0.1:8000: [WinError 10048] Normalmente é permitida apenas uma utilização de cada endereço de soquete (protocolo/endereço de rede/porta).
+ERROR 2025-06-03 14:27:55,486 consumers 17876 18164 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:27:56,270 server 17876 18164 Exception inside application: Error 10061 connecting to 127.0.0.1:6379. Connect call failed ('127.0.0.1', 6379).
+Traceback (most recent call last):
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\connection.py", line 302, in connect_check_health
+    await self.retry.call_with_retry(
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\retry.py", line 71, in call_with_retry
+    return await do()
+           ^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\connection.py", line 755, in _connect
+    reader, writer = await asyncio.open_connection(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1073, in create_connection
+    raise exceptions[0]
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1058, in create_connection
+    sock = await self._connect_sock(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 964, in _connect_sock
+    await self.sock_connect(sock, address)
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\selector_events.py", line 633, in sock_connect
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\selector_events.py", line 668, in _sock_connect_cb
+    raise OSError(err, f'Connect call failed {address}')
+ConnectionRefusedError: [Errno 10061] Connect call failed ('127.0.0.1', 6379)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\routing.py", line 48, in __call__
+    return await application(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\security\websocket.py", line 37, in __call__
+    return await self.application(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\sessions.py", line 44, in __call__
+    return await self.inner(dict(scope, cookies=cookies), receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\sessions.py", line 261, in __call__
+    return await self.inner(wrapper.scope, receive, wrapper.send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\auth.py", line 185, in __call__
+    return await super().__call__(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\middleware.py", line 24, in __call__
+    return await self.inner(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\routing.py", line 118, in __call__
+    return await application(
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\consumer.py", line 95, in app
+    return await consumer(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\consumer.py", line 58, in __call__
+    await await_many_dispatch(
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\utils.py", line 57, in await_many_dispatch
+    await task
+redis.exceptions.ConnectionError: Error 10061 connecting to 127.0.0.1:6379. Connect call failed ('127.0.0.1', 6379).
+ERROR 2025-06-03 14:28:01,466 consumers 17876 18164 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:28:02,458 server 17876 18164 Exception inside application: Error 10061 connecting to 127.0.0.1:6379. Connect call failed ('127.0.0.1', 6379).
+Traceback (most recent call last):
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\connection.py", line 302, in connect_check_health
+    await self.retry.call_with_retry(
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\retry.py", line 71, in call_with_retry
+    return await do()
+           ^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\connection.py", line 755, in _connect
+    reader, writer = await asyncio.open_connection(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1073, in create_connection
+    raise exceptions[0]
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1058, in create_connection
+    sock = await self._connect_sock(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 964, in _connect_sock
+    await self.sock_connect(sock, address)
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\selector_events.py", line 633, in sock_connect
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\selector_events.py", line 668, in _sock_connect_cb
+    raise OSError(err, f'Connect call failed {address}')
+ConnectionRefusedError: [Errno 10061] Connect call failed ('127.0.0.1', 6379)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\routing.py", line 48, in __call__
+    return await application(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\security\websocket.py", line 37, in __call__
+    return await self.application(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\sessions.py", line 44, in __call__
+    return await self.inner(dict(scope, cookies=cookies), receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\sessions.py", line 261, in __call__
+    return await self.inner(wrapper.scope, receive, wrapper.send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\auth.py", line 185, in __call__
+    return await super().__call__(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\middleware.py", line 24, in __call__
+    return await self.inner(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\routing.py", line 118, in __call__
+    return await application(
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\consumer.py", line 95, in app
+    return await consumer(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\consumer.py", line 58, in __call__
+    await await_many_dispatch(
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\utils.py", line 57, in await_many_dispatch
+    await task
+redis.exceptions.ConnectionError: Error 10061 connecting to 127.0.0.1:6379. Connect call failed ('127.0.0.1', 6379).
+ERROR 2025-06-03 14:28:07,628 consumers 17876 18164 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:28:08,508 server 17876 18164 Exception inside application: Error 10061 connecting to 127.0.0.1:6379. Connect call failed ('127.0.0.1', 6379).
+Traceback (most recent call last):
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\connection.py", line 302, in connect_check_health
+    await self.retry.call_with_retry(
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\retry.py", line 71, in call_with_retry
+    return await do()
+           ^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\redis\asyncio\connection.py", line 755, in _connect
+    reader, writer = await asyncio.open_connection(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\streams.py", line 48, in open_connection
+    transport, _ = await loop.create_connection(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1073, in create_connection
+    raise exceptions[0]
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 1058, in create_connection
+    sock = await self._connect_sock(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py", line 964, in _connect_sock
+    await self.sock_connect(sock, address)
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\selector_events.py", line 633, in sock_connect
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\AppData\Local\Programs\Python\Python311\Lib\asyncio\selector_events.py", line 668, in _sock_connect_cb
+    raise OSError(err, f'Connect call failed {address}')
+ConnectionRefusedError: [Errno 10061] Connect call failed ('127.0.0.1', 6379)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\routing.py", line 48, in __call__
+    return await application(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\security\websocket.py", line 37, in __call__
+    return await self.application(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\sessions.py", line 44, in __call__
+    return await self.inner(dict(scope, cookies=cookies), receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\sessions.py", line 261, in __call__
+    return await self.inner(wrapper.scope, receive, wrapper.send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\auth.py", line 185, in __call__
+    return await super().__call__(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\middleware.py", line 24, in __call__
+    return await self.inner(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\routing.py", line 118, in __call__
+    return await application(
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\consumer.py", line 95, in app
+    return await consumer(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\consumer.py", line 58, in __call__
+    await await_many_dispatch(
+  File "C:\Users\mdorsi.tier2.admin\projeto_veicular_back\.venv\Lib\site-packages\channels\utils.py", line 57, in await_many_dispatch
+    await task
+redis.exceptions.ConnectionError: Error 10061 connecting to 127.0.0.1:6379. Connect call failed ('127.0.0.1', 6379).
+ERROR 2025-06-03 14:29:33,607 consumers 9212 20516 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:50:44,367 consumers 1880 15980 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:51:53,558 consumers 21280 16736 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:52:18,413 consumers 21280 16736 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:53:37,746 consumers 21112 492 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
+ERROR 2025-06-03 14:54:44,905 consumers 7580 13392 Erro ao inicializar detector de placas: Socket has not been accepted, so cannot send over it
