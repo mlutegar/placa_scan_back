@@ -428,3 +428,5 @@
 [2025-06-03 14:25:46] WARNING django.request: Not Found: /static/admin/img/icon-deletelink.svg
 [2025-06-03 14:29:28] WARNING django.request: Not Found: /static/admin/img/icon-deletelink.svg
 [2025-06-03 14:54:42] WARNING django.request: Not Found: /favicon.ico
+[2025-06-03 15:25:16] WARNING django.request: Not Found: /.well-known/appspecific/com.chrome.devtools.json
+[2025-06-03 15:29:38] WARNING django.request: Not Found: /favicon.ico

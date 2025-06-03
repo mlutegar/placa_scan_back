@@ -2,6 +2,12 @@
 const videoFeed = document.getElementById('videoFeed');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const loadingText = document.getElementById('loadingText');
+// ++ ADICIONAR: Referências para os novos botões e elementos de UI ++
+const useWebcamButton = document.getElementById('useWebcamButton');
+const useMjpegButton = document.getElementById('useMjpegButton');
+const mjpegUrlGroup = document.getElementById('mjpegUrlGroup'); // Descomente se adicionou o input de URL
+const webcamIdGroup = document.getElementById('webcamIdGroup');
+// const mjpegUrlInput = document.getElementById('mjpegUrl'); // Descomente se adicionou o input de URL
 const startButton = document.getElementById('startButton');
 const stopButton = document.getElementById('stopButton');
 const cameraIdInput = document.getElementById('cameraId');
@@ -16,6 +22,12 @@ const validPlatesEl = document.getElementById('validPlates');
 const avgConfidenceEl = document.getElementById('avgConfidence');
 const detectionRateEl = document.getElementById('detectionRate');
 
+console.log("Script webcam.js carregado.");
+console.log("Elemento useWebcamButton:", useWebcamButton);
+console.log("Elemento useMjpegButton:", useMjpegButton);
+console.log("Elemento webcamIdGroup:", webcamIdGroup);
+
+
 // Configurações WebSocket
 const socketUrl = `ws://${window.location.hostname}:8000/ws/video-stream/`;
 let socket;
@@ -29,6 +41,9 @@ let startTime = Date.now();
 let isSavingFrame = false; // Flag para controlar o envio de frames para salvamento
 const SAVE_FRAME_INTERVAL = 5000; // Salvar no máximo um frame a cada 5 segundos
 let lastSaveTime = 0;
+
+// ++ ADICIONAR: Variável para controlar a fonte de vídeo atual ++
+let currentVideoSource = 'webcam'; // 'webcam' ou 'mjpeg'
 
 // Atualizar status
 function updateStatus(message, type = 'info') {
@@ -46,7 +61,7 @@ function connectWebSocket() {
 
     socket.onopen = function (e) {
         updateStatus("✅ WebSocket conectado com sucesso!", 'success');
-        startButton.disabled = false;
+        startButton.disabled = false; // Habilitar o botão de iniciar após a conexão
         reconnectAttempts = 0;
     };
 
@@ -87,7 +102,23 @@ function connectWebSocket() {
     };
 }
 
-// ++ ADICIONAR: Função para converter base64 para Blob ++
+// ++ ADICIONAR: Função para atualizar a UI de seleção de fonte ++
+function updateSourceSelectionUI() {
+    if (currentVideoSource === 'webcam') {
+        useWebcamButton.classList.add('active');
+        useMjpegButton.classList.remove('active');
+        if (webcamIdGroup) webcamIdGroup.style.display = 'block';
+        // if (mjpegUrlGroup) mjpegUrlGroup.style.display = 'none'; // Descomente se usar input de URL MJPEG
+    } else { // mjpeg
+        useWebcamButton.classList.remove('active');
+        useMjpegButton.classList.add('active');
+        if (webcamIdGroup) webcamIdGroup.style.display = 'none';
+        // if (mjpegUrlGroup) mjpegUrlGroup.style.display = 'block'; // Descomente se usar input de URL MJPEG
+    }
+}
+
+
+// Função para converter base64 para Blob
 function base64ToBlob(base64, contentType = '', sliceSize = 512) {
     const byteCharacters = atob(base64);
     const byteArrays = [];
@@ -105,14 +136,13 @@ function base64ToBlob(base64, contentType = '', sliceSize = 512) {
     return new Blob(byteArrays, {type: contentType});
 }
 
-// ++ ADICIONAR: Função para obter o cookie CSRF ++
+// Função para obter o cookie CSRF
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
-            // Does this cookie string begin with the name we want?
             if (cookie.substring(0, name.length + 1) === (name + '=')) {
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
@@ -122,15 +152,13 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// ++ ADICIONAR: Função para enviar o frame ao backend para salvamento ++
+// Função para enviar o frame ao backend para salvamento
 async function saveFrameToServer(frameBase64) {
     if (isSavingFrame) {
-        // console.log("Salvamento de frame já em progresso.");
         return;
     }
     const now = Date.now();
     if (now - lastSaveTime < SAVE_FRAME_INTERVAL) {
-        // console.log("Intervalo mínimo entre salvamentos não atingido.");
         return;
     }
 
@@ -150,7 +178,6 @@ async function saveFrameToServer(frameBase64) {
             method: 'POST',
             headers: {
                 'X-CSRFToken': csrfToken,
-                // 'Content-Type': 'multipart/form-data' é definido automaticamente pelo navegador para FormData
             },
             body: formData
         });
@@ -159,7 +186,6 @@ async function saveFrameToServer(frameBase64) {
             const result = await response.json();
             console.log('Frame salvo com sucesso. Detecção ID:', result.id, 'Placas:', result.plates);
             updateStatus(`🖼️ Frame salvo (ID: ${result.id}), ${result.plates ? result.plates.length : 0} placa(s) processada(s).`, 'success');
-
             fetchPlatesFromDB();
         } else {
             const errorData = await response.json();
@@ -178,58 +204,57 @@ async function saveFrameToServer(frameBase64) {
 function handleWebSocketMessage(data) {
     switch (data.type) {
         case 'frame':
-            // Atualizar vídeo
             videoFeed.src = 'data:image/jpeg;base64,' + data.frame;
             if (videoFeed.style.display === 'none') {
                 videoFeed.style.display = 'block';
                 loadingOverlay.style.display = 'none';
             }
-
             if (detectionEnabled && data.frame && data.plates && data.plates.length > 0) {
-                // Poderia haver uma lógica mais sofisticada aqui para decidir
-                // quais frames salvar (ex: apenas se uma nova placa única aparecer,
-                // ou com base na confiança, etc.)
-                // Por ora, tentaremos salvar se houver placas.
-                // A função saveFrameToServer() já tem um controle de taxa.
                 saveFrameToServer(data.frame);
             }
             break;
-
-        case 'camera_started':
+        case 'camera_started': // ++ ALTERAR: Mensagem mais genérica ++
             updateStatus(`✅ ${data.message}`, 'success');
             startButton.disabled = true;
             stopButton.disabled = false;
+            // ++ ADICIONAR: Desabilitar botões de seleção de fonte enquanto o stream está ativo ++
+            useWebcamButton.disabled = true;
+            useMjpegButton.disabled = true;
             startTime = Date.now();
-            detectedPlates = []; // Limpa placas da UI
-            updatePlatesList(); // Atualiza UI
+            detectedPlates = [];
+            updatePlatesList();
             updateStatistics();
-            lastSaveTime = 0; // Resetar o tempo do último salvamento
+            lastSaveTime = 0;
             break;
-
-        case 'camera_stopped':
+        case 'camera_stopped': // ++ ALTERAR: Mensagem mais genérica ++
             updateStatus(`⏹️ ${data.message}`);
             startButton.disabled = false;
             stopButton.disabled = true;
+            // ++ ADICIONAR: Habilitar botões de seleção de fonte quando o stream parar ++
+            useWebcamButton.disabled = false;
+            useMjpegButton.disabled = false;
             videoFeed.style.display = 'none';
             loadingOverlay.style.display = 'flex';
-            loadingText.textContent = 'Câmera parada';
+            loadingText.textContent = 'Stream parado'; // ++ ALTERAR ++
             clearPlatesList();
             break;
-
         case 'error':
             updateStatus(`❌ ${data.message}`, 'error');
+            // ++ ALTERAR: Habilitar startButton e botões de seleção em caso de erro ao iniciar ++
             startButton.disabled = false;
+            useWebcamButton.disabled = false;
+            useMjpegButton.disabled = false;
             stopButton.disabled = true;
+            loadingOverlay.style.display = 'flex';
+            loadingText.textContent = 'Erro ao iniciar';
+            videoFeed.style.display = 'none';
             break;
-
         case 'connection':
             updateStatus(`🔗 ${data.message}`, 'success');
             break;
-
         case 'plate_detector_ready':
             updateStatus(`🤖 ${data.message}`, 'success');
             break;
-
         case 'detection_toggled':
             detectionEnabled = data.enabled;
             updateDetectionToggle();
@@ -238,36 +263,30 @@ function handleWebSocketMessage(data) {
 }
 
 
-// ++ NOVA FUNÇÃO: Buscar placas do banco de dados ++
+// Buscar placas do banco de dados
 async function fetchPlatesFromDB() {
     updateStatus("🔄 Carregando placas do banco de dados...", 'info');
     try {
-        const response = await fetch('/api/detected-plates/'); // Endpoint criado na Parte 1
+        const response = await fetch('/api/detected-plates/');
         if (!response.ok) {
             let errorMsg = `Erro HTTP ${response.status}`;
             try {
                 const errorData = await response.json();
                 errorMsg = errorData.detail || errorData.error || JSON.stringify(errorData);
-            } catch (e) { /* ignore parsing error */
-            }
+            } catch (e) { /* ignore parsing error */ }
             throw new Error(errorMsg);
         }
         const platesFromDB = await response.json();
 
-        // Mapear os dados do backend para o formato que updatePlatesList espera
         detectedPlates = platesFromDB.map(plate => {
             const knownNum = plate.known_plate_number;
-            // Prioriza plate_number_detected, depois best_ocr_text como a placa detectada.
             const detectedNum = plate.plate_number_detected || plate.best_ocr_text;
-
             let htmlFormattedPlateText;
-            let simplePlateText; // Para uso em atributos 'alt' ou contextos não-HTML
+            let simplePlateText;
 
             if (knownNum) {
                 htmlFormattedPlateText = `<div><span class="plate-label">Placa Conhecida:</span> ${knownNum}</div>`;
-                // Sempre mostrar a detectada se a conhecida estiver presente, para clareza.
                 htmlFormattedPlateText += `<div><span class="plate-label">Placa Detectada:</span> ${detectedNum || "N/A"}</div>`;
-
                 simplePlateText = `${knownNum}`;
                 if (detectedNum && knownNum !== detectedNum) {
                     simplePlateText += ` (Detectada: ${detectedNum})`;
@@ -278,13 +297,11 @@ async function fetchPlatesFromDB() {
                 htmlFormattedPlateText = `<div><span class="plate-label">Placa Detectada:</span> ${detectedNum || "N/A"}</div>`;
                 simplePlateText = detectedNum || "N/A";
             }
-
             const isValid = !!plate.known_plate;
-
             return {
                 id: plate.id,
-                text: simplePlateText, // Texto simples para 'alt' e outros.
-                formatted_text: htmlFormattedPlateText, // HTML formatado para exibição principal.
+                text: simplePlateText,
+                formatted_text: htmlFormattedPlateText,
                 confidence: plate.best_ocr_confidence !== null && plate.best_ocr_confidence !== undefined
                     ? plate.best_ocr_confidence * 100
                     : 0,
@@ -297,21 +314,17 @@ async function fetchPlatesFromDB() {
                 is_valid: isValid,
                 cropped_image_url: plate.cropped_image_url,
                 raw_timestamp: plate.detection_created_at,
-                known_plate_is_regularized: plate.known_plate_is_regularized // Mantém da alteração anterior
+                known_plate_is_regularized: plate.known_plate_is_regularized
             };
         });
 
         updatePlatesList();
-        updateStatistics(); // As estatísticas também devem se basear nas placas do banco
+        updateStatistics();
         updateStatus(`✅ ${detectedPlates.length} placas carregadas do banco.`, 'success');
 
     } catch (error) {
         console.error('Erro ao buscar placas do banco de dados:', error);
         updateStatus(`⚠️ Erro ao carregar placas: ${error.message}`, 'error');
-        // Opcional: limpar a lista se o carregamento falhar
-        // detectedPlates = [];
-        // updatePlatesList();
-        // updateStatistics();
     }
 }
 
@@ -321,15 +334,13 @@ function updatePlatesList() {
         platesList.innerHTML = `
             <div class="info-panel">
                 <p>Nenhuma placa salva no banco de dados.</p>
-                <p>Inicie a câmera para detectar e salvar novas placas.</p>
-            </div>
+                <p>Inicie o stream para detectar e salvar novas placas.</p> </div>
         `;
         return;
     }
 
     platesList.innerHTML = detectedPlates.map(plate => {
         let regularizationDisplayHtml;
-        // Verifica se a propriedade known_plate_is_regularized existe e é um booleano
         if (typeof plate.known_plate_is_regularized === 'boolean') {
             if (plate.known_plate_is_regularized) {
                 regularizationDisplayHtml = `<span class="plate-status regularizada">✅ Regularizada</span>`;
@@ -337,42 +348,40 @@ function updatePlatesList() {
                 regularizationDisplayHtml = `<span class="plate-status nao-regularizada">❌ Não Regularizada</span>`;
             }
         } else {
-            // Caso a placa não seja conhecida ou o status de regularização não esteja disponível
             regularizationDisplayHtml = `<span class="plate-status status-desconhecido">❔ Status Desconhecido</span>`;
         }
 
         return `
-        <div class="plate-item ${plate.is_valid ? '' : 'invalid'}">
-            ${plate.cropped_image_url ? `
+            <div class="plate-item ${plate.is_valid ? '' : 'invalid'}">
+                ${plate.cropped_image_url ? `
                 <div class="plate-image-container">
                     <img src="${plate.cropped_image_url}" alt="Placa ${plate.text}" class="plate-thumbnail">
                 </div>
-            ` : ''}
-            <div class="plate-info-details">
-                <div class="plate-text">${plate.formatted_text || plate.text}</div>
-                <div class="confidence-bar">
-                    <div class="confidence-fill" style="width: ${plate.confidence.toFixed(1)}%"></div>
+                ` : ''}
+                <div class="plate-info-details">
+                    <div class="plate-text">${plate.formatted_text || plate.text}</div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${plate.confidence.toFixed(1)}%"></div>
+                    </div>
+                    <div class="plate-details">
+                        ${regularizationDisplayHtml}
+                        <span class="timestamp">${plate.timestamp}</span>
+                    </div>
+                    <div class="plate-details">
+                        <span>OCR: ${plate.confidence.toFixed(1)}%</span>
+                        <span>YOLO: ${plate.yolo_confidence.toFixed(1)}%</span>
+                    </div>
                 </div>
-                <div class="plate-details">
-                    ${regularizationDisplayHtml}
-                    <span class="timestamp">${plate.timestamp}</span>
-                </div>
-                <div class="plate-details">
-                    <span>OCR: ${plate.confidence.toFixed(1)}%</span>
-                    <span>YOLO: ${plate.yolo_confidence.toFixed(1)}%</span>
-                </div>
-            </div>
-        </div>`;
+            </div>`;
     }).join('');
 }
 
 // Limpar lista de placas
 function clearPlatesList() {
-    platesList.innerHTML = `  
-        <div class="info-panel"> 
-            <p>Nenhuma placa detectada ainda.</p> 
-            <p>Inicie a câmera para começar a detecção.</p> 
-        </div>  
+    platesList.innerHTML = `
+        <div class="info-panel">
+            <p>Nenhuma placa detectada ainda.</p>
+            <p>Inicie o stream para começar a detecção.</p> </div>
     `;
 }
 
@@ -402,18 +411,53 @@ function updateDetectionToggle() {
 }
 
 // Event Listeners
+
+// ++ ADICIONAR: Listeners para os botões de seleção de fonte ++
+if (useWebcamButton) {
+    useWebcamButton.onclick = function () {
+        currentVideoSource = 'webcam';
+        updateSourceSelectionUI();
+    };
+}
+
+if (useMjpegButton) {
+    useMjpegButton.onclick = function () {
+        currentVideoSource = 'mjpeg';
+        updateSourceSelectionUI();
+    };
+}
+
+
 startButton.onclick = function () {
     if (socket && socket.readyState === WebSocket.OPEN) {
-        const camId = parseInt(cameraIdInput.value, 10);
         const message = {
             command: 'start_camera',
-            camera_id: camId,
+            source_type: currentVideoSource, // ++ ADICIONAR: Enviar tipo de fonte ++
             detection_enabled: detectionEnabled
         };
+
+        if (currentVideoSource === 'webcam') {
+            message.camera_id = parseInt(cameraIdInput.value, 10);
+        } else if (currentVideoSource === 'mjpeg') {
+            // Se o URL do MJPEG for configurável pelo usuário e não fixo no backend:
+            // const mjpegStreamUrl = mjpegUrlInput.value;
+            // if (!mjpegStreamUrl) {
+            //     updateStatus("❌ URL do MJPEG não fornecida.", 'error');
+            //     return;
+            // }
+            // message.mjpeg_url = mjpegStreamUrl;
+            // Por enquanto, o URL do MJPEG é fixo no backend, então não precisamos enviar.
+            // O backend saberá qual URL usar quando source_type for 'mjpeg'.
+        }
+
         socket.send(JSON.stringify(message));
-        updateStatus(`📹 Tentando iniciar câmera ${camId}...`);
-        loadingText.textContent = 'Iniciando câmera...';
+        updateStatus(`📹 Tentando iniciar stream (${currentVideoSource})...`); // ++ ALTERAR ++
+        loadingText.textContent = 'Iniciando stream...'; // ++ ALTERAR ++
         loadingOverlay.style.display = 'flex';
+        // ++ ADICIONAR: Desabilitar botões de seleção de fonte ao iniciar ++
+        useWebcamButton.disabled = true;
+        useMjpegButton.disabled = true;
+
     } else {
         updateStatus("❌ WebSocket não está conectado", 'error');
     }
@@ -421,8 +465,8 @@ startButton.onclick = function () {
 
 stopButton.onclick = function () {
     if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({command: 'stop_camera'}));
-        updateStatus("⏹️ Parando câmera...");
+        socket.send(JSON.stringify({ command: 'stop_camera' }));
+        updateStatus("⏹️ Parando stream..."); // ++ ALTERAR ++
     } else {
         updateStatus("❌ WebSocket não está conectado", 'error');
     }
@@ -444,11 +488,12 @@ detectionToggle.onclick = function () {
 connectWebSocket();
 updateDetectionToggle();
 fetchPlatesFromDB();
+updateSourceSelectionUI(); // ++ ADICIONAR: Chamar para definir o estado inicial da UI de seleção ++
 
 // Limpar recursos ao sair da página
 window.addEventListener('beforeunload', function () {
     if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({command: 'stop_camera'}));
+        socket.send(JSON.stringify({ command: 'stop_camera' }));
         socket.close();
     }
 });

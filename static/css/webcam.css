@@ -405,3 +405,28 @@ body {
 .plate-item.saved {
     border-left: 3px solid #28a745;
 }
+
+.source-selection {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.source-selection label {
+    margin-right: 10px;
+}
+
+.source-selection .btn {
+    margin-right: 5px;
+}
+
+.source-selection .btn.active {
+    background-color: #007bff; /* Ou a cor primária do seu tema */
+    color: white;
+    border-color: #007bff;
+}
+
+.source-selection .btn:not(.active) {
+    background-color: #6c757d; /* Cor secundária ou cinza */
+    color: white;
+}
