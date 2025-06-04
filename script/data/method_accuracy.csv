@@ -1,0 +1,9 @@
+Método,Acertos,Total,Porcentagem de Acerto
+Adaptive,0,12,0.0
+Bilateral,11,18,61.111111111111114
+Grayscale,9,20,45.0
+Inverted,13,21,61.904761904761905
+Original,8,19,42.10526315789473
+Otsu,2,12,16.666666666666664
+Resized2x,13,18,72.22222222222221
+Sharpened,9,16,56.25

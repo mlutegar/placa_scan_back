@@ -9,3 +9,6 @@ opencv-python-headless
 channels_redis
 daphne
 pytesseract
+matplotlib
+pandas
+reportlab

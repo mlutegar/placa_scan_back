@@ -33,7 +33,8 @@ class VideoStreamConsumer(AsyncWebsocketConsumer):
         self.detection_cache_duration = 5.0
 
         # ++ ADICIONAR: Configuração para URL do MJPEG (pode ser movida para settings.py se preferir) ++
-        self.MJPEG_STREAM_URL = "http://admin:admin@172.16.1.143:8081/video"  # Exemplo de URL
+        # self.MJPEG_STREAM_URL = "http://admin:admin@172.16.1.143:8081/video"  # Exemplo de URL
+        self.MJPEG_STREAM_URL = "http://172.16.3.192:81/stream"  # Exemplo de URL
 
     async def connect(self):
         self.loop = asyncio.get_event_loop()
