@@ -6,6 +6,8 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
 [![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-yellow.svg)](https://github.com/ultralytics/ultralytics)
 
+https://www.canva.com/design/DAGp968ZEDE/Ysf2rYL_f00USe7ULTsD3w/edit?utm_content=DAGp968ZEDE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
 ## Visão Geral
 
 Sistema web completo para detecção e reconhecimento de placas veiculares, desenvolvido com **Django REST Framework** e **WebSockets** para processamento em tempo real. O sistema oferece uma interface web moderna para upload de imagens, stream de vídeo ao vivo e gerenciamento de banco de dados de placas conhecidas.
