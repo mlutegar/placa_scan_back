@@ -7,7 +7,10 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
+import android.graphics.Matrix
+import android.net.Uri
 import android.util.Log
+import androidx.exifinterface.media.ExifInterface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -24,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -43,7 +48,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
 @Composable
-fun CameraScreen() {
+fun CameraScreen(bottomPadding: Dp = 0.dp) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var hasCameraPermission by remember {
@@ -68,7 +73,7 @@ fun CameraScreen() {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var recognizedText by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
-    
+
     // Lista de detecções para o overlay
     var detections by remember { mutableStateOf(emptyList<TFLitePlateDetector.Detection>()) }
 
@@ -84,12 +89,93 @@ fun CameraScreen() {
         onDispose { plateDetector.close() }
     }
 
+    suspend fun processPlate(fullBitmap: Bitmap) {
+        val frameDetections = plateDetector.detect(fullBitmap, confidenceThreshold = 0.3f)
+        Log.d("CameraScreen", "YOLO detectou ${frameDetections.size} placa(s)")
+        val bestDetection = frameDetections.maxByOrNull { it.confidence }
+
+        var croppedPlateBitmap: Bitmap? = null
+
+        if (bestDetection != null) {
+            croppedPlateBitmap = openCVProcessor.cropPlate(
+                fullBitmap,
+                bestDetection.xMin, bestDetection.yMin,
+                bestDetection.xMax, bestDetection.yMax,
+                padding = 15
+            )
+            Log.d("CameraScreen", "Crop: xMin=${bestDetection.xMin} yMin=${bestDetection.yMin} xMax=${bestDetection.xMax} yMax=${bestDetection.yMax} → resultado=${croppedPlateBitmap?.width}x${croppedPlateBitmap?.height}")
+        }
+
+        // Tenta OCR na imagem recortada primeiro; se falhar, tenta com processamento OpenCV; se não tiver crop, usa imagem completa
+        val bitmapToOcr = croppedPlateBitmap ?: fullBitmap
+        Log.d("CameraScreen", "Bitmap enviado ao OCR: ${bitmapToOcr.width}x${bitmapToOcr.height}")
+        var text = mlKitTextRecognizer.recognizeText(bitmapToOcr)
+        Log.d("CameraScreen", "OCR (sem processamento) leu: '$text'")
+
+        if (text.isBlank() && croppedPlateBitmap != null) {
+            val processed = openCVProcessor.processPlateImage(croppedPlateBitmap)
+            text = mlKitTextRecognizer.recognizeText(processed)
+            Log.d("CameraScreen", "OCR (com OpenCV) leu: '$text'")
+        }
+        val validation = com.example.placascan.domain.ocr.PlateValidator.validate(text)
+
+        if (validation.isValid) {
+            val knownPlates = knownPlateRepo.getKnownPlatesList()
+            val plateTexts = knownPlates.map { it.plateText }
+            val bestMatchPair = com.example.placascan.domain.matcher.LevenshteinMatcher.bestMatch(validation.plate, plateTexts)
+            val bestMatchEntity = if (bestMatchPair != null) knownPlates[bestMatchPair.first] else null
+            val isKnown = bestMatchEntity != null
+            val statusText = if (isKnown) "✅ ${bestMatchEntity?.ownerName}" else "⚠️ Desconhecido"
+            recognizedText = "${validation.plate} - $statusText"
+
+            var imagePath: String? = null
+            if (croppedPlateBitmap != null) {
+                imagePath = com.example.placascan.utils.ImageStorageHelper.saveBitmapToInternalStorage(context, croppedPlateBitmap)
+            }
+
+            val entity = com.example.placascan.data.local.entities.PlateDetectionEntity(
+                plateText = validation.plate,
+                plateType = validation.type.name,
+                imagePath = imagePath,
+                isKnown = isKnown,
+                ownerName = bestMatchEntity?.ownerName,
+                timestamp = System.currentTimeMillis()
+            )
+            detectionRepo.insertDetection(entity)
+        } else {
+            recognizedText = if (text.isBlank()) "Nenhuma placa lida" else "Inválido: $text"
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            isProcessing = true
+            recognizedText = "Processando..."
+            coroutineScope.launch {
+                try {
+                    val bitmap = loadBitmapFromUri(context, uri)
+                    if (bitmap != null) {
+                        Log.d("CameraScreen", "Imagem carregada: ${bitmap.width}x${bitmap.height}")
+                        processPlate(bitmap)
+                    } else {
+                        recognizedText = "Erro ao carregar imagem"
+                    }
+                } catch (e: Exception) {
+                    Log.e("CameraScreen", "Erro ao processar imagem da galeria: ${e.message}", e)
+                    recognizedText = "Erro ao processar imagem"
+                } finally {
+                    isProcessing = false
+                }
+            }
+        }
+    }
+
     fun takePicture() {
         val capture = imageCapture ?: return
         isProcessing = true
         recognizedText = "Processando..."
-
-        val bestDetection = detections.maxByOrNull { it.confidence }
 
         capture.takePicture(
             ContextCompat.getMainExecutor(context),
@@ -97,63 +183,8 @@ fun CameraScreen() {
                 override fun onCaptureSuccess(image: ImageProxy) {
                     val fullBitmap = imageProxyToBitmap(image)
                     image.close()
-
                     coroutineScope.launch {
-                        var finalBitmap = fullBitmap
-                        var croppedPlateBitmap: Bitmap? = null
-                        
-                        if (bestDetection != null) {
-                            val w = fullBitmap.width.toFloat()
-                            val h = fullBitmap.height.toFloat()
-                            
-                            val xMin = bestDetection.relXMin * w
-                            val yMin = bestDetection.relYMin * h
-                            val xMax = bestDetection.relXMax * w
-                            val yMax = bestDetection.relYMax * h
-                            
-                            val cropped = openCVProcessor.cropPlate(fullBitmap, xMin, yMin, xMax, yMax, padding = 15)
-                            if (cropped != null) {
-                                croppedPlateBitmap = cropped
-                                finalBitmap = openCVProcessor.processPlateImage(cropped)
-                            }
-                        }
-
-                        val text = mlKitTextRecognizer.recognizeText(finalBitmap)
-                        val validation = com.example.placascan.domain.ocr.PlateValidator.validate(text)
-                        
-                        if (validation.isValid) {
-                            // Verifica se é uma placa conhecida (Fuzzy Matcher)
-                            val knownPlates = knownPlateRepo.getKnownPlatesList()
-                            val plateTexts = knownPlates.map { it.plateText }
-                            val bestMatchPair = com.example.placascan.domain.matcher.LevenshteinMatcher.bestMatch(validation.plate, plateTexts)
-                            
-                            val bestMatchEntity = if (bestMatchPair != null) knownPlates[bestMatchPair.first] else null
-                            val isKnown = bestMatchEntity != null
-                            val statusText = if (isKnown) "✅ ${bestMatchEntity?.ownerName}" else "⚠️ Desconhecido"
-                            
-                            recognizedText = "${validation.plate} - $statusText"
-
-                            // Salva imagem no armazenamento
-                            var imagePath: String? = null
-                            if (croppedPlateBitmap != null) {
-                                imagePath = com.example.placascan.utils.ImageStorageHelper.saveBitmapToInternalStorage(context, croppedPlateBitmap)
-                            }
-
-                            // Salva no banco de dados (Histórico)
-                            val entity = com.example.placascan.data.local.entities.PlateDetectionEntity(
-                                plateText = validation.plate,
-                                plateType = validation.type.name,
-                                imagePath = imagePath,
-                                isKnown = isKnown,
-                                ownerName = bestMatchEntity?.ownerName,
-                                timestamp = System.currentTimeMillis()
-                            )
-                            detectionRepo.insertDetection(entity)
-
-                        } else {
-                            recognizedText = if (text.isBlank()) "Nenhuma placa lida" else "Inválido: $text"
-                        }
-                        
+                        processPlate(fullBitmap)
                         isProcessing = false
                     }
                 }
@@ -226,22 +257,41 @@ fun CameraScreen() {
                 }
             }
 
-            // Botão de captura manual
-            FloatingActionButton(
-                onClick = { if (!isProcessing) takePicture() },
+            // Botões de ação
+            Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 48.dp)
-                    .size(72.dp),
-                shape = CircleShape,
-                containerColor = if (isProcessing) Color.Gray else MaterialTheme.colorScheme.primary
+                    .padding(bottom = 16.dp + bottomPadding),
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Camera,
-                    contentDescription = "Capturar placa",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
+                FloatingActionButton(
+                    onClick = { if (!isProcessing) galleryLauncher.launch("image/*") },
+                    modifier = Modifier.size(56.dp),
+                    shape = CircleShape,
+                    containerColor = if (isProcessing) Color.Gray else MaterialTheme.colorScheme.secondary
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Photo,
+                        contentDescription = "Escolher da galeria",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                FloatingActionButton(
+                    onClick = { if (!isProcessing) takePicture() },
+                    modifier = Modifier.size(72.dp),
+                    shape = CircleShape,
+                    containerColor = if (isProcessing) Color.Gray else MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Camera,
+                        contentDescription = "Capturar placa",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
         } else {
@@ -332,6 +382,28 @@ fun CameraPreview(
         factory = { previewView },
         modifier = modifier
     )
+}
+
+private fun loadBitmapFromUri(context: android.content.Context, uri: Uri): Bitmap? {
+    val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+    val bitmap = BitmapFactory.decodeStream(inputStream)
+    inputStream.close()
+
+    val exifStream = context.contentResolver.openInputStream(uri) ?: return bitmap
+    val exif = ExifInterface(exifStream)
+    exifStream.close()
+
+    val rotation = when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+        ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+        ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+        else -> 0f
+    }
+
+    if (rotation == 0f) return bitmap
+
+    val matrix = Matrix().apply { postRotate(rotation) }
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 }
 
 /**

@@ -27,17 +27,16 @@ object PlateValidator {
      * Limpa o texto bruto extraído pelo OCR e verifica se corresponde a uma placa válida.
      */
     fun validate(rawText: String): ValidationResult {
-        // Limpa espaços, traços e converte para maiúsculo
-        val cleanText = rawText.replace("[^A-Z0-9]".toRegex(RegexOption.IGNORE_CASE), "").uppercase()
-
-        // Ajustes comuns de OCR (ex: '0' lido como 'O', '1' lido como 'I')
-        // Em um sistema real mais robusto, aplicaríamos isso apenas nas posições onde sabemos
-        // que deve haver número ou letra.
-        
-        return when {
-            cleanText.matches(regexMercosul) -> ValidationResult(true, cleanText, PlateType.MERCOSUL)
-            cleanText.matches(regexAntigo) -> ValidationResult(true, cleanText, PlateType.ANTIGA)
-            else -> ValidationResult(false, cleanText, PlateType.INVALIDA)
+        // Testa cada linha separadamente — OCR retorna várias linhas (ex: MERCOSUL, BRASIL, ABC1D23, BR)
+        val lines = rawText.lines()
+        for (line in lines) {
+            val clean = line.replace("[^A-Z0-9]".toRegex(RegexOption.IGNORE_CASE), "").uppercase()
+            when {
+                clean.matches(regexMercosul) -> return ValidationResult(true, clean, PlateType.MERCOSUL)
+                clean.matches(regexAntigo)   -> return ValidationResult(true, clean, PlateType.ANTIGA)
+            }
         }
+        val fullClean = rawText.replace("[^A-Z0-9]".toRegex(RegexOption.IGNORE_CASE), "").uppercase()
+        return ValidationResult(false, fullClean, PlateType.INVALIDA)
     }
 }

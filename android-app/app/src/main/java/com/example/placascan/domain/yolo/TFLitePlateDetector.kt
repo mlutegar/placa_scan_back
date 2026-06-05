@@ -109,37 +109,27 @@ class TFLitePlateDetector(context: Context) {
     ): List<Detection> {
         val detections = mutableListOf<Detection>()
 
-        val scaleX = originalWidth / inputSize.toFloat()
-        val scaleY = originalHeight / inputSize.toFloat()
-        val scale = max(scaleX, scaleY) // Mantém a proporção (letterbox se aplicável)
-
         for (i in 0 until numAnchors) {
-            val confidence = output[4][i] // Índice 4: class_score
+            val confidence = output[4][i]
             if (confidence > confidenceThreshold) {
                 val cx = output[0][i]
                 val cy = output[1][i]
                 val w = output[2][i]
                 val h = output[3][i]
 
-                // Coordenadas normalizadas da rede (YOLOv8) para [0..1]
-                val relCx = cx / inputSize
-                val relCy = cy / inputSize
-                val relW = w / inputSize
-                val relH = h / inputSize
-
-                // Converter coordenadas de centro/largura para bounding box (e reescalar)
-                val xMin = (cx - w / 2) * scale
-                val yMin = (cy - h / 2) * scale
-                val xMax = (cx + w / 2) * scale
-                val yMax = (cy + h / 2) * scale
+                // Modelo retorna coordenadas normalizadas (0-1), converter para pixels da imagem original
+                val xMin = (cx - w / 2) * originalWidth
+                val yMin = (cy - h / 2) * originalHeight
+                val xMax = (cx + w / 2) * originalWidth
+                val yMax = (cy + h / 2) * originalHeight
 
                 detections.add(
                     Detection(
                         xMin, yMin, xMax, yMax, confidence,
-                        relXMin = relCx - relW / 2,
-                        relYMin = relCy - relH / 2,
-                        relXMax = relCx + relW / 2,
-                        relYMax = relCy + relH / 2
+                        relXMin = cx - w / 2,
+                        relYMin = cy - h / 2,
+                        relXMax = cx + w / 2,
+                        relYMax = cy + h / 2
                     )
                 )
             }

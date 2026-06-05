@@ -2,6 +2,8 @@ package com.example.placascan
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -49,7 +51,7 @@ fun MainNavigation() {
         modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         when (selectedTab) {
-            0 -> CameraScreen()
+            0 -> CameraScreen(bottomPadding = innerPadding.calculateBottomPadding())
             1 -> HistoryScreen(modifier = Modifier.padding(innerPadding))
             2 -> KnownPlatesScreen(modifier = Modifier.padding(innerPadding))
         }
