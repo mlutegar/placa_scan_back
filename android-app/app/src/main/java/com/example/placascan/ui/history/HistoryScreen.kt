@@ -117,21 +117,28 @@ fun HistoryItem(detection: PlateDetectionEntity) {
                     color = Color.Gray
                 )
                 
-                if (detection.isKnown) {
-                    Text(
-                        text = "Conhecido: ${detection.ownerName}",
-                        fontSize = 14.sp,
-                        color = Color(0xFF4CAF50), // Verde
-                        fontWeight = FontWeight.Medium
-                    )
-                } else {
-                    Text(
-                        text = "Desconhecido",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Medium
-                    )
+                val statusText: String
+                val statusColor: Color
+                when (detection.isRegularized) {
+                    true -> {
+                        statusText = "✅ Regularizada"
+                        statusColor = Color(0xFF4CAF50) // Verde
+                    }
+                    false -> {
+                        statusText = "❌ Não Regularizada"
+                        statusColor = MaterialTheme.colorScheme.error // Vermelho
+                    }
+                    null -> {
+                        statusText = "❔ Status Desconhecido"
+                        statusColor = Color.Gray
+                    }
                 }
+                Text(
+                    text = statusText,
+                    fontSize = 14.sp,
+                    color = statusColor,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

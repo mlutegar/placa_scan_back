@@ -11,6 +11,6 @@ data class PlateDetectionEntity(
     val plateType: String,
     val imagePath: String?,
     val isKnown: Boolean,
-    val ownerName: String?,
+    val isRegularized: Boolean?,
     val timestamp: Long
 )

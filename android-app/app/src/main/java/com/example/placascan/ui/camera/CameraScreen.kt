@@ -125,7 +125,12 @@ fun CameraScreen(bottomPadding: Dp = 0.dp) {
             val bestMatchPair = com.example.placascan.domain.matcher.LevenshteinMatcher.bestMatch(validation.plate, plateTexts)
             val bestMatchEntity = if (bestMatchPair != null) knownPlates[bestMatchPair.first] else null
             val isKnown = bestMatchEntity != null
-            val statusText = if (isKnown) "✅ ${bestMatchEntity?.ownerName}" else "⚠️ Desconhecido"
+            val isRegularized = bestMatchEntity?.isRegularized
+            val statusText = when (isRegularized) {
+                true -> "✅ Regularizada"
+                false -> "❌ Não Regularizada"
+                null -> "⚠️ Desconhecida"
+            }
             recognizedText = "${validation.plate} - $statusText"
 
             var imagePath: String? = null
@@ -138,7 +143,7 @@ fun CameraScreen(bottomPadding: Dp = 0.dp) {
                 plateType = validation.type.name,
                 imagePath = imagePath,
                 isKnown = isKnown,
-                ownerName = bestMatchEntity?.ownerName,
+                isRegularized = isRegularized,
                 timestamp = System.currentTimeMillis()
             )
             detectionRepo.insertDetection(entity)

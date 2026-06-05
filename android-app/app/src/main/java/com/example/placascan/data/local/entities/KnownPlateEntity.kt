@@ -8,5 +8,5 @@ data class KnownPlateEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val plateText: String,
-    val ownerName: String
+    val isRegularized: Boolean
 )

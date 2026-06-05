@@ -24,7 +24,7 @@ class PlacaScanApplication : Application() {
             applicationContext,
             AppDatabase::class.java,
             "placascan-db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
         
         detectionRepository = DetectionRepository(database.detectionDao())
         knownPlateRepository = KnownPlateRepository(database.knownPlateDao())

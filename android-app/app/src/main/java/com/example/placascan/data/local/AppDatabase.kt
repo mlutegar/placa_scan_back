@@ -17,7 +17,7 @@ import com.example.placascan.data.local.entities.PlateDetectionEntity
         KnownPlateEntity::class,
         PlateDetectionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -74,7 +74,7 @@ fun KnownPlatesScreen(modifier: Modifier = Modifier) {
 
     if (showAddDialog) {
         var plateInput by remember { mutableStateOf("") }
-        var ownerInput by remember { mutableStateOf("") }
+        var isRegularizedInput by remember { mutableStateOf(true) }
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -85,23 +85,33 @@ fun KnownPlatesScreen(modifier: Modifier = Modifier) {
                         value = plateInput,
                         onValueChange = { plateInput = it.uppercase() },
                         label = { Text("Placa (Ex: ABC1234)") },
-                        singleLine = true
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = ownerInput,
-                        onValueChange = { ownerInput = it },
-                        label = { Text("Nome do Proprietário/Veículo") },
-                        singleLine = true
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Placa Regularizada",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Switch(
+                            checked = isRegularizedInput,
+                            onCheckedChange = { isRegularizedInput = it }
+                        )
+                    }
                 }
             },
             confirmButton = {
                 Button(onClick = {
-                    if (plateInput.isNotBlank() && ownerInput.isNotBlank()) {
+                    if (plateInput.isNotBlank()) {
                         coroutineScope.launch {
                             knownPlateRepo.insertKnownPlate(
-                                KnownPlateEntity(plateText = plateInput, ownerName = ownerInput)
+                                KnownPlateEntity(plateText = plateInput, isRegularized = isRegularizedInput)
                             )
                         }
                         showAddDialog = false
@@ -140,10 +150,13 @@ fun KnownPlateItem(plate: KnownPlateEntity, onDelete: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                val statusText = if (plate.isRegularized) "✅ Regularizada" else "❌ Não Regularizada"
+                val statusColor = if (plate.isRegularized) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
                 Text(
-                    text = "Dono: ${plate.ownerName}",
+                    text = statusText,
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = statusColor,
+                    fontWeight = FontWeight.Medium
                 )
             }
             
