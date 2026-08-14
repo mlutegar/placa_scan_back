@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.placascan.data.DetectionRepository
 import com.example.placascan.data.KnownPlateRepository
 import com.example.placascan.data.local.AppDatabase
+import com.example.placascan.data.mqtt.MqttPublisher
 
 class PlacaScanApplication : Application() {
     
@@ -16,6 +17,8 @@ class PlacaScanApplication : Application() {
         
     lateinit var knownPlateRepository: KnownPlateRepository
         private set
+
+    val mqttPublisher: MqttPublisher by lazy { MqttPublisher(this) }
 
     override fun onCreate() {
         super.onCreate()

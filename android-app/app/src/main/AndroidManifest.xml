@@ -4,6 +4,9 @@
     <!-- Câmera: necessária para CameraX capturar frames ao vivo -->
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!-- Internet: publicação MQTT das detecções -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Armazenamento: leitura/escrita de imagens no armazenamento interno do app -->
     <!-- No Android 10+, o acesso ao diretório privado do app não precisa de permissão -->
     <!-- Abaixo do Android 10, precisamos da permissão de escrita para storage externo -->

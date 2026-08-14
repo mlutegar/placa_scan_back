@@ -2,6 +2,7 @@ package com.example.placascan.domain.ocr
 
 import android.graphics.Bitmap
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlin.coroutines.resume
@@ -39,6 +40,28 @@ class MLKitTextRecognizer {
         } catch (e: Exception) {
             e.printStackTrace()
             continuation.resume("")
+        }
+    }
+
+    /**
+     * Mesmo reconhecimento de [recognizeText], mas retorna o resultado estruturado
+     * do ML Kit (blocos/linhas/elementos/símbolos com confiança), ou null se falhar.
+     * O texto bruto equivalente é `result.text`.
+     */
+    suspend fun recognizeDetailed(bitmap: Bitmap): Text? = suspendCoroutine { continuation ->
+        try {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            recognizer.process(image)
+                .addOnSuccessListener { result ->
+                    continuation.resume(result)
+                }
+                .addOnFailureListener { e ->
+                    e.printStackTrace()
+                    continuation.resume(null)
+                }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            continuation.resume(null)
         }
     }
 }

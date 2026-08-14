@@ -40,6 +40,8 @@ android {
     packaging {
       resources {
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // Netty (HiveMQ MQTT) traz esses recursos duplicados em vários jars
+        excludes += listOf("META-INF/INDEX.LIST", "META-INF/io.netty.versions.properties")
         pickFirsts += listOf("lib/arm64-v8a/libc++_shared.so", "lib/armeabi-v7a/libc++_shared.so")
       }
     }
@@ -103,4 +105,7 @@ dependencies {
 
   // OpenCV Android — processamento de imagens (pré-processamento OCR)
   implementation(libs.opencv.android)
+
+  // MQTT — publicação das detecções para o broker IoT
+  implementation(libs.hivemq.mqtt.client)
 }

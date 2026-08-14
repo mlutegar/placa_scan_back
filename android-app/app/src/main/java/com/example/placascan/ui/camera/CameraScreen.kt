@@ -109,15 +109,19 @@ fun CameraScreen(bottomPadding: Dp = 0.dp) {
         // Tenta OCR na imagem recortada primeiro; se falhar, tenta com processamento OpenCV; se não tiver crop, usa imagem completa
         val bitmapToOcr = croppedPlateBitmap ?: fullBitmap
         Log.d("CameraScreen", "Bitmap enviado ao OCR: ${bitmapToOcr.width}x${bitmapToOcr.height}")
-        var text = mlKitTextRecognizer.recognizeText(bitmapToOcr)
+        var ocrResult = mlKitTextRecognizer.recognizeDetailed(bitmapToOcr)
+        var text = ocrResult?.text ?: ""
         Log.d("CameraScreen", "OCR (sem processamento) leu: '$text'")
 
         if (text.isBlank() && croppedPlateBitmap != null) {
             val processed = openCVProcessor.processPlateImage(croppedPlateBitmap)
-            text = mlKitTextRecognizer.recognizeText(processed)
+            ocrResult = mlKitTextRecognizer.recognizeDetailed(processed)
+            text = ocrResult?.text ?: ""
             Log.d("CameraScreen", "OCR (com OpenCV) leu: '$text'")
         }
         val validation = com.example.placascan.domain.ocr.PlateValidator.validate(text)
+        // Marco do fim do reconhecimento (base da latência reconhecimento→PUBACK)
+        val recognitionEndMs = android.os.SystemClock.elapsedRealtime()
 
         if (validation.isValid) {
             val knownPlates = knownPlateRepo.getKnownPlatesList()
@@ -147,6 +151,20 @@ fun CameraScreen(bottomPadding: Dp = 0.dp) {
                 timestamp = System.currentTimeMillis()
             )
             detectionRepo.insertDetection(entity)
+
+            // Publicação MQTT: uma por placa reconhecida, fire-and-forget
+            val ocrConf = com.example.placascan.domain.ocr.OcrConfidence
+                .minCharConfidence(ocrResult, validation.plate)
+            application.mqttPublisher.publishDetection(
+                plate = validation.plate,
+                fmt = when (validation.type) {
+                    com.example.placascan.domain.ocr.PlateValidator.PlateType.MERCOSUL -> "mercosur"
+                    else -> "antiga"
+                },
+                ocrConf = ocrConf,
+                detConf = bestDetection?.confidence,
+                recognitionEndMs = recognitionEndMs
+            )
         } else {
             recognizedText = if (text.isBlank()) "Nenhuma placa lida" else "Inválido: $text"
         }
