@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,15 +16,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.placascan.ui.camera.CameraScreen
 import com.example.placascan.ui.history.HistoryScreen
 import com.example.placascan.ui.knownplates.KnownPlatesScreen
+import com.example.placascan.benchmark.BenchmarkScreen
 
 /**
  * Navegação principal com barra de abas (Bottom Navigation).
  * Substitui as rotas e templates web (webcam, histórico, placas) do projeto Django.
  *
- * 3 abas:
+ * 4 abas:
  *  1. Câmera — detecção em tempo real (CameraX + YOLO + OCR)
  *  2. Histórico — lista de detecções salvas no Room
  *  3. Placas — CRUD de placas conhecidas no Room
+ *  4. Benchmark — Teste de OCR com OpenCV e ML Kit
  */
 @Composable
 fun MainNavigation() {
@@ -32,7 +35,8 @@ fun MainNavigation() {
     val tabs = listOf(
         BottomTab("Câmera", Icons.Default.CameraAlt),
         BottomTab("Histórico", Icons.Default.History),
-        BottomTab("Placas", Icons.Default.DirectionsCar)
+        BottomTab("Placas", Icons.Default.DirectionsCar),
+        BottomTab("Benchmark", Icons.Default.Speed)
     )
 
     Scaffold(
@@ -54,6 +58,7 @@ fun MainNavigation() {
             0 -> CameraScreen(bottomPadding = innerPadding.calculateBottomPadding())
             1 -> HistoryScreen(modifier = Modifier.padding(innerPadding))
             2 -> KnownPlatesScreen(modifier = Modifier.padding(innerPadding))
+            3 -> BenchmarkScreen(onNavigateBack = { selectedTab = 0 })
         }
     }
 }
