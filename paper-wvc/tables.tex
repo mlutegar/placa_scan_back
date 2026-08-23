@@ -1,0 +1,38 @@
+% Tabela 1: Comparativo CBIC (Tesseract) vs WVC2026 (ML Kit)
+\begin{table}[h]
+\centering
+\caption{Comparativo de Acurácia: Tesseract OCR (Desktop) vs ML Kit (On-Device)}
+\label{tab:comparative}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Métrica} & \textbf{Tesseract (CBIC2025)} & \textbf{ML Kit (WVC2026)} \\ \hline
+Melhor Método (Full-Plate) & Resized2x (66.7\%) & Original (28.8\%) \\
+Inverted (Full-Plate) & 11.8\% & 24.2\% \\
+Posição 0 (1º char) & 40.5\% & 34.4\% \\
+Posição 6 (Último char) & 20.6\% & 30.2\% \\
+Acurácia Geral Caractere & 26.8\% & 29.4\% \\
+Acurácia Geral Placa & 3.1\% & 11.2\% \\ \hline
+\end{tabular}
+\end{table}
+
+% Tabela 2: Top 10 Combinações (ML Kit)
+\begin{table}[h]
+\centering
+\caption{Top 10 Combinações de Pré-processamento e Threshold (ML Kit)}
+\label{tab:top10}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Método} & \textbf{Threshold} & \textbf{Acurácia Full-Plate (\%)} \\ \hline
+Original & 0.0 & 28.8\% \\
+Original & 0.4 & 28.8\% \\
+Original & 0.2 & 28.8\% \\
+Inverted & 0.4 & 24.2\% \\
+Inverted & 0.2 & 24.2\% \\
+Inverted & 0.0 & 24.2\% \\
+Grayscale & 0.0 & 21.2\% \\
+Grayscale & 0.2 & 21.2\% \\
+Grayscale & 0.4 & 21.2\% \\
+Resized2x & 0.4 & 19.7\% \\
+\hline
+\end{tabular}
+\end{table}

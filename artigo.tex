@@ -1,0 +1,150 @@
+\documentclass[conference,hidelinks]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{orcidlink}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{flushend}
+\usepackage{caption}
+\captionsetup{
+  font=footnotesize,
+  labelsep=period,
+  format=plain,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+\usepackage[english]{babel}
+\hyphenation{pre-pro-ces-sa-men-to me-to-do-lo-gia}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Investigating image pre-processing techniques to enhance Brazilian license plate recognition
+\thanks{This study was supported by Ibmec. The author, Michel Lutegar, is participating as a student in the Voluntary Scientific Initiation Program at Ibmec-RJ.}
+}
+
+\author{
+\IEEEauthorblockN{Michel Lutegar}
+\IEEEauthorblockA{\textit{Program of Computer Engineering} \\
+\textit{Ibmec University Center}\\
+Rio de Janeiro - RJ, Brazil \\
+mlutegar@gmail.com
+}
+\and
+\IEEEauthorblockN{Rigel P. Fernandes}
+\IEEEauthorblockA{\textit{Program of Computer Engineering} \\
+\textit{Ibmec University Center}\\
+Rio de Janeiro - RJ, Brazil \\
+rigelfernandes@gmail.com \orcidlink{0000-0001-5269-2342}
+}
+\and
+\IEEEauthorblockN{Thiago Silva de Souza}
+\IEEEauthorblockA{\textit{Program of Computer Engineering} \\
+\textit{Ibmec University Center}\\
+Rio de Janeiro - RJ, Brazil \\
+t.souza@ibmec.edu.br
+}
+\and
+\IEEEauthorblockN{Clayton J. A. Silva}
+\IEEEauthorblockA{\textit{Program of Computer Engineering} \\
+\textit{Ibmec University Center}\\
+Rio de Janeiro - RJ, Brazil \\
+clayton.silva@ibmec.edu.br
+}
+}
+
+\maketitle
+\begin{abstract}
+This paper presents an embedded real-time license plate recognition (LPR) system for public security operations in Brazil, where vehicle theft and cloning demand rapid identification of suspicious vehicles during patrols and checkpoints. Our solution integrates YOLO detection with Tesseract OCR on resource-constrained hardware. To optimize recognition, we evaluate eight classical image preprocessing methods across confidence thresholds from 0.0 to 0.8 on a dataset of 65 Brazilian plates (old and Mercosul formats), totaling 2,600 OCR attempts. Results show large performance variation: 2x resizing reaches 66.7\% full-plate accuracy (threshold 0.8) at high computational cost, while image inversion reaches 11.8\% (threshold 0.4) with near-zero overhead, making it attractive for embedded deployment. Character-level accuracy (26.8\%) far exceeds full-plate accuracy (3.1\%), indicating that probabilistic sequence reconstruction is a promising direction. These findings offer practical guidance for embedded LPR across law enforcement, parking, and toll applications.
+\end{abstract}
+
+\begin{IEEEkeywords}
+license plate recognition, OCR, image preprocessing, YOLO, Brazilian traffic systems
+\end{IEEEkeywords}
+
+%---------------------
+\section{Introduction}
+%---------------------
+
+Vehicle-related crimes, including theft and cloning, pose significant challenges to public safety in Brazil~\cite{shjarback2024examining,tourani2020robust}. License plate recognition (LPR) systems have become critical across many domains, enabling automated toll collection, traffic monitoring~\cite{nguyen2022realtime}, parking management~\cite{assumpcao2024estacionamento}, access control, and law enforcement surveillance~\cite{merola2019impact,shashirangana2021automated}. Among these, law enforcement imposes the most stringent constraints: real-time processing, high accuracy under adverse conditions, and deployment on resource-constrained embedded platforms in patrol vehicles~\cite{tang2024ultra,ammar2023multistage}. Preprocessing strategies developed for this demanding scenario transfer naturally to the broader LPR spectrum.
+
+LPR in operational environments faces challenges that strongly affect accuracy: varying lighting, weather, image blur, and plate degradation~\cite{silva2018license,xianli2021vehicle,tavares2024comparison}. Brazilian plates add difficulty due to the coexistence of the old (ABC1234) and Mercosul (ABC1A23) formats~\cite{silva2020synthetic,qin2022towards}. At the same time, embedded platforms operate under strict computational and energy budgets, requiring lightweight algorithms that preserve accuracy while meeting real-time targets~\cite{yuan2017robust,shashirangana2022automated}. Image preprocessing bridges raw captured images and successful character recognition by enhancing quality, reducing noise, and improving contrast~\cite{tavares2024comparison,wang2022rethinking,zhang2021robust}.
+
+Contemporary LPR research emphasizes deep-learning preprocessing—CNN-based enhancement and multi-stage pipelines optimized for high-performance computing~\cite{li2019toward,chen2021endtoend}—which typically require GPU acceleration and power levels incompatible with patrol-vehicle deployment~\cite{tang2024ultra}. Classical computer vision techniques, while simpler, offer the efficiency advantages crucial for constrained platforms~\cite{shashirangana2022automated}. Yet little work has systematically evaluated classical preprocessing methods, with varied parameters, specifically for Brazilian plates under embedded constraints~\cite{silva2020synthetic}. This motivates our research question: \textit{how can we maximize OCR accuracy for Brazilian plates using preprocessing that is lightweight and fast enough for embedded hardware while meeting real-time requirements?}
+
+This work provides: (1) a systematic evaluation of eight classical preprocessing techniques for Brazilian-plate OCR in embedded systems; (2) parameter optimization across thresholds from 0.0 to 0.8 on a curated dataset; (3) an evaluation framework jointly considering accuracy and computational efficiency; and (4) practical guidelines applicable beyond law enforcement to parking, toll, and access-control systems. Section~\ref{sec: methodology} describes the methods and framework, Section~\ref{sec: results} presents the results, and Section~\ref{sec: conclusions} concludes.
+
+%---------------------
+\section{Methodology}
+\label{sec: methodology}
+%---------------------
+
+\subsection{System Overview}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\columnwidth]{plots/diagram-policia-ingles.png}
+    \caption{ALPR system pipeline, from image capture through preprocessing, OCR extraction, and post-processing validation, to database querying for vehicle status verification.}
+    \label{fig:alpr-architecture}
+\end{figure}
+
+Figure~\ref{fig:alpr-architecture} shows the complete pipeline. A YOLO stage localizes the plate and provides a cropped region of interest~\cite{moussaoui2024enhancing,liu2021fast}; the preprocessing stage—the focus of this work—then conditions that region for OCR, directly impacting overall accuracy while respecting embedded efficiency requirements~\cite{li2019toward,chen2021endtoend,shashirangana2022automated}. Final database cross-referencing enables real-time alerts for stolen, cloned, or flagged vehicles within seconds of detection~\cite{tao2024realtime,gao2024unified}.
+
+\subsection{Investigated Preprocessing Methods}
+
+We evaluate eight classical methods, selected for low computational cost and proven effectiveness in document recognition~\cite{gonzalez2017digital,tavares2024comparison}, making them suitable for resource-constrained platforms~\cite{yuan2017robust,zou2020robust}: (i)~\textit{Grayscale}---RGB-to-luminance conversion removing color variation~\cite{silva2018license}; (ii)~\textit{Inversion}---pixel-intensity reversal ($255-\text{pixel}$) to improve character--background contrast~\cite{smith2007overview,zhang2021robust}; (iii)~\textit{Adaptive thresholding}---per-pixel local thresholds robust to uneven illumination~\cite{bradley1997adaptive}; (iv)~\textit{Bilateral filtering}---edge-preserving noise reduction~\cite{tomasi1998bilateral}; (v)~\textit{Original}---detected region without modification (baseline)~\cite{wang2022rethinking}; (vi)~\textit{Otsu thresholding}---automatic global threshold maximizing inter-class variance~\cite{otsu1979threshold}; (vii)~\textit{Resized2x}---2x bicubic upscaling to enhance low-resolution detail~\cite{chen2021endtoend}; and (viii)~\textit{Sharpening}---edge enhancement via convolution~\cite{zou2020robust}. Combinations of methods were not evaluated, to isolate the individual contribution of each technique and preserve computational efficiency. Unlike deep-learning preprocessing, these methods need no training data and offer deterministic, low-overhead operation that enables rapid deployment in operational environments~\cite{tang2024ultra}.
+
+\subsection{OCR Evaluation Framework}
+
+\textbf{Dataset.} We use 65 Brazilian plates with manually verified ground truth—21 old-format (ABC1234) and 44 Mercosul (ABC1A23)—captured under varied lighting, viewing angles, and degradation states to reflect operational conditions~\cite{silva2020synthetic,qin2022towards}.
+
+\textbf{Pipeline and OCR.} YOLO localizes each plate~\cite{moussaoui2024enhancing}; the region is normalized while preserving aspect ratio, each preprocessing method is applied with thresholds from 0.0 to 0.8~\cite{tavares2024comparison}, and characters are read with Tesseract configured with an alphanumeric whitelist and single-line segmentation~\cite{smith2007overview}.
+
+\textbf{Metrics and procedure.} We require exact full-sequence matching, with partial matches counted as failures to reflect real deployment needs~\cite{powers2011evaluation}, and report both full-plate and character-level accuracy. Each method is evaluated at five thresholds (0.0, 0.2, 0.4, 0.6, 0.8) over all 65 images, yielding 2{,}600 deterministic OCR attempts ($8\times5\times65$) in a holdout setting that needs no training. Experiments run on hardware representative of embedded constraints to ensure practical applicability.
+
+%---------------------
+\section{Results and Discussion}
+\label{sec: results}
+%---------------------
+
+Across 2{,}600 OCR attempts, full-plate accuracy ranged from 0\% to 66.7\%, with an overall character-level accuracy of 26.8\% versus a full-plate accuracy of 3.1\%~\cite{wang2022rethinking,zhang2021robust}. This 8.5x gap shows that individual characters are frequently read correctly while exact sequence matching is the bottleneck—a strong argument for character-level confidence scoring and probabilistic sequence reconstruction.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{plots/07_method_performance_heatmap.png}
+\caption{Accuracy heatmap across all method--threshold combinations.}
+\label{fig:accuracy_heatmap}
+\end{figure}
+
+Figure~\ref{fig:accuracy_heatmap} summarizes all method--threshold combinations. \textit{Resized2x} was the best method, its threshold-0.8 configuration reaching 66.7\% full-plate accuracy~\cite{chen2021endtoend,gonzalez2017digital}, but it requires roughly 4x memory and bicubic-interpolation cost that is problematic for embedded hardware~\cite{ammar2023multistage,yuan2017robust}. \textit{Inversion} ranked third at 11.8\% (threshold 0.4) using only the arithmetic $255-\text{pixel}$, an excellent accuracy/cost balance for patrol-vehicle deployment~\cite{silva2018license}. Bilateral filtering, Grayscale, Sharpening, Adaptive, and Otsu thresholding remained below 5\% in most configurations~\cite{otsu1979threshold,tomasi1998bilateral,bradley1997adaptive}. Confidence thresholding raised average accuracy by 121.7\% (from 2.0\% to 4.3\%), though the gain was not statistically significant ($p=0.5865$)~\cite{powers2011evaluation}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\columnwidth]{plots/04_character_position_accuracy.png}
+\caption{Character recognition accuracy by position (0--6) across all preprocessing methods.}
+\label{fig:character_accuracy}
+\end{figure}
+
+Character position strongly affects accuracy (Fig.~\ref{fig:character_accuracy}): the first position reached 40.5\% while the last reached 20.6\%, and the overall false-positive rate was 96.9\% (true positives 3.1\%)~\cite{smith2007overview,fawcett2006introduction}. These patterns motivate multi-stage validation—format verification, position weighting, and database cross-referencing. One-way ANOVA confirms significant differences among methods ($p=0.0124$) and a Chi-square test confirms position effects ($p<0.0001$), while the threshold effect remains non-significant ($p=0.5865$), validating the experimental design~\cite{powers2011evaluation,fawcett2006introduction}.
+
+Two deployment strategies emerge. \textit{Maximum accuracy:} Resized2x (threshold 0.8), 66.7\%, at high computational cost. \textit{Embedded-optimized:} Inversion (threshold 0.4), 11.8\%, with near-zero overhead—preferable for continuous operation on constrained hardware. The 65-plate dataset, adequate for an initial comparison, limits statistical power—notably for the threshold analysis~\cite{qin2022towards}; future work should expand to 200--300 plates across more diverse operational conditions.
+
+%--------------------
+\section{Conclusions}
+\label{sec: conclusions}
+%--------------------
+
+We evaluated eight image preprocessing methods for embedded Brazilian LPR over 2{,}600 OCR attempts on 65 plates, identifying configurations that trade recognition accuracy against the computational budget of patrol-vehicle hardware. Resized2x maximizes accuracy (66.7\%) at high cost, while inversion offers a near-free 11.8\% suited to real-time embedded use. The large character-vs-plate accuracy gap points to character-level confidence weighting and probabilistic sequence reconstruction as the most promising next steps, alongside larger and more diverse datasets, adaptive preprocessing selection from real-time image-quality assessment, and the evaluation of complementary method combinations. The Android prototype validated that the full pipeline—YOLOv8 via TensorFlow Lite, OpenCV preprocessing, and offline ML Kit OCR—runs on commodity Android devices (API~24+) without network dependency, confirming the practical viability of the embedded approach for patrol operations.
+
+\bibliographystyle{IEEEtran}
+\bibliography{IEEEabrv,refs}
+
+\end{document}
