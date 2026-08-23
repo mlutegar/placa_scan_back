@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Python / Django
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.log
+
+# Repositório clonado localmente para consulta (não faz parte do projeto)
+temp_repo/
+
+# Android (complementa android-app/.gitignore)
+android-app/.kotlin/
+android-app/.idea/
+android-app/local.properties
